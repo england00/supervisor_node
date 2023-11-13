@@ -19,24 +19,29 @@ The node's output is the state of the FSM and is published as a topic.
 4. [Demo](#demo)
      
 ## Installation
-
+- Sourcing ros2 underlay (foxy distro in this case):
 ```shell
-# sourcing ros2 underlay (foxy distro in this case)
 $ source /opt/ros/foxy/setup.bash
+```
 
-# clone packages 
+- Cloning packages:
+```shell
 $ cd ~/ros2_ws/src
 $ git clone https://github.com/uleroboticsgroup/simple_node.git
 $ git clone https://github.com/uleroboticsgroup/yasmin.git
 $ git clone https://github.com/england00/SupervisorNode.git
+```
 
-# installing dependencies
+- Installing dependencies:
+```shell
 $ cd yasmin
 $ pip3 install -r requirements.txt
 $ cd ../..
 $ cd rosdep install --ignore-src --from-paths src -y -r
+```
 
-# building workspace
+- Building the workspace:
+```shell
 $ colcon build
 ```
 
