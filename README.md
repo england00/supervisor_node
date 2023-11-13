@@ -21,7 +21,7 @@ The node's output is the state of the FSM and is published as a topic.
 
      
 ## Installation
-- Sourcing ros2 underlay (foxy distro in this case):
+- Sourcing ROS2 underlay (foxy distro in this case):
 ```shell
 $ source /opt/ros/foxy/setup.bash
 ```
