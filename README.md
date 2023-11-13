@@ -6,7 +6,23 @@ Within the repository, two additional nodes are included for demonstration purpo
 - [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally;
 - [Failure Simulator](src/failure_simulator.cpp), that provides some possibily errors the system can face with, stimulating respective responses by the machine.
 
-In addition, there is also a [Launch File](launch/demo.py) for calling the execution of all the three nodes together with one single command. 
+In addition, there is also a [Launch File](launch/demo.py) for calling the execution of all the three nodes together with just a single command. 
+
+## Index
+- [SupervisorNode](.)
+    - [Code](#code)
+        - [Main program](#main.py) 
+	    - [Metrics program](#metrics.py)
+    - [Files](#files)
+        - [Queries](#_queries)
+            - [Each type of query object in one directory](#object_*)
+	    - [Repository](#_repository)
+	    - [Results](#_results)
+    - [Resources](#resources)
+        - [Classes](#classes)
+        - [Configuration](#configuration)
+        - [Functions](#functions)
+        - [Utility](#utility)
 
 ## Definitions:
 - <u>Primary Driving Stack</u>: high-performance autonomous driving solution but prone to failures or potentially hazardous conditions;
