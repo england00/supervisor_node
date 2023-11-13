@@ -10,18 +10,17 @@ In addition, there is also a [Launch File](launch/demo.py) for calling the execu
 
 ## Index
 - [SupervisorNode](.)
-    - [launch](launch)
-        - [demo.py](launch/demo.py) 
-    - [src](src)
-        - [Queries](#_queries)
-            - [Each type of query object in one directory](#object_*)
-	    - [Repository](#_repository)
-	    - [Results](#_results)
-    - [Resources](#resources)
-        - [Classes](#classes)
-        - [Configuration](#configuration)
-        - [Functions](#functions)
-        - [Utility](#utility)
+    - [CMake File](./CMakeLists.txt)
+    - [Launch Files](launch)
+        - [Demo](launch/demo.py)
+    - [Licence](./LICENSE)
+    - [Package XML](./package.xml)
+    - [Readme](./README.md)
+    - [Source Files](src)
+        - [Failure Simulator](src/failure_simulator.cpp)
+        - [State Selector](src/state_selector.cpp)
+        - [Supervisor Node](src/supervisor_node.cpp)
+    
 
 ## Definitions
 - <u>Primary Driving Stack</u>: high-performance autonomous driving solution but prone to failures or potentially hazardous conditions;
