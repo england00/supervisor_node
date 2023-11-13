@@ -99,4 +99,26 @@ Within the repository, two additional nodes are included for working with the [S
 - [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally;
 - [Failure Simulator](src/failure_simulator.cpp), that provides some possibily errors the system can face with, stimulating respective responses by the machine.
 
-So, a [Launch File](launch/demo.py) is provided for calling the execution of all the nodes together with just a single command. 
+To run the demo open three terminal window and follow these commands for each one:
+```shell
+$ cd ~/ros2_ws/src
+$ source /opt/ros/foxy/setup.bash
+$ source install/local_setup.bash 
+```
+- Terminal 1:
+```shell
+$ ros2 run supervisor_node supervisor_node
+```
+- Terminal 2:
+```shell
+$ ros2 run supervisor_node state_selector
+```
+- Terminal 3:
+```shell
+$ ros2 run supervisor_node failure_simulator
+```
+
+Otherwise, a [Launch File](launch/demo.py) is provided for calling the execution of all the nodes together with just this single command: 
+```shell
+$ ros2 launch supervisor_node demo.py
+```
