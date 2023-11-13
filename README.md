@@ -39,7 +39,7 @@ git clone https://github.com/england00/supervisor_node.git
 cd yasmin
 pip3 install -r requirements.txt
 cd ../..
-cd rosdep install --ignore-src --from-paths src -y -r
+rosdep install --ignore-src --from-paths src -y -r
 ```
 
 - Building the workspace:
