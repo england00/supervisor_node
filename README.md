@@ -78,7 +78,7 @@ The node implements the following states:
 - **Emergency Stop [ES]**: the vehicle is unable to move autonomously:
     - driving commands are ignored, and the vehicle is stopped in place.
  
-### Transition
+### Transitions
 The node implements the following state transitions:
 - **(I) ←→ (M)**: service callable from the outside;
 - **(M) ←→ (A)**: service callable from the outside;
