@@ -123,4 +123,4 @@ Otherwise, a [Launch File](launch/demo.py) is provided for calling the execution
 $ ros2 launch supervisor_node demo.py
 ```
 In this case is added a further node execution, provided by [YASMIN](https://github.com/uleroboticsgroup/yasmin) library. 
-This node, called Yasmin Viewer Node, enables a web service on [localhost](http://localhost:5000/) in which is represented the execution of current states and transitions of the FSM with a graph.
+This last one, called Yasmin Viewer Node, enables a web service on [localhost](http://localhost:5000/) in which is represented the execution of current states and transitions of the FSM with a graph.
