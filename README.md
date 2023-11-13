@@ -10,10 +10,9 @@ In addition, there is also a [Launch File](launch/demo.py) for calling the execu
 
 ## Index
 - [SupervisorNode](.)
-    - [Code](#code)
-        - [Main program](#main.py) 
-	    - [Metrics program](#metrics.py)
-    - [Files](#files)
+    - [launch](launch)
+        - [demo.py](launch/demo.py) 
+    - [src](src)
         - [Queries](#_queries)
             - [Each type of query object in one directory](#object_*)
 	    - [Repository](#_repository)
@@ -24,7 +23,7 @@ In addition, there is also a [Launch File](launch/demo.py) for calling the execu
         - [Functions](#functions)
         - [Utility](#utility)
 
-## Definitions:
+## Definitions
 - <u>Primary Driving Stack</u>: high-performance autonomous driving solution but prone to failures or potentially hazardous conditions;
 - <u>Secondary Driving Stack</u>: less performant but more reliable and conservative autonomous driving solution;
 - <u>Common Failure</u>: a condition where autonomous driving with the primary stack cannot proceed, in which:
@@ -33,7 +32,7 @@ In addition, there is also a [Launch File](launch/demo.py) for calling the execu
 - <u>Severe Failure</u>: a hardware component becomes unresponsive, so:
     - a failure in sensor or actuator drivers.
 
-## States:
+## States
 The node implements the following states:
 - **Idle [I]**: the node is active and awaits signals from the outside;
 - **Manual [M]**: the vehicle is in manual driving mode:
@@ -47,7 +46,7 @@ The node implements the following states:
 - **Emergency Stop [ES]**: the vehicle is unable to move autonomously:
     - driving commands are ignored, and the vehicle is stopped in place.
  
-## Transition:
+## Transition
 The node implements the following state transitions:
 - **(I) ←→ (M)**: service callable from the outside;
 - **(M) ←→ (A)**: service callable from the outside;
