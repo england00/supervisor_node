@@ -26,6 +26,8 @@
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
 #define PRIMARY_DRIVING_STACK_TOPIC "supervisor_node/primary_driving_stack"
+#define COMMON_FAULT_TOPIC "supervisor_node/common_fault"
+#define SERIOUS_FAULT_TOPIC "supervisor_node/serious_fault"
 
 using namespace std;
 
@@ -134,7 +136,7 @@ class ActiveState : public yasmin::State {
 private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr active_state_pub_{};
-    string next_state_, primary_driving_stack_command_;
+    string next_state_, primary_driving_stack_command_, common_fault_;
 
 public:
     // constructor
@@ -160,6 +162,8 @@ public:
             }
             cout << stdout_buffer << endl;
 
+            // managing common fault
+
             this->primary_driving_stack_command_ = "";  // cleaning latest command buffer
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
             if (this->next_state_ == M) {  // checking if MANUAL state has been selected
@@ -170,6 +174,7 @@ public:
 
     void set_next_state(string str) {  this->next_state_ = str;  }
     void set_primary_driving_stack_command(string str) {  this->primary_driving_stack_command_ = str;  }
+    void set_common_fault(string str) {  this->common_fault_ = str;  }
     string to_string() {  return A;  }
 };
 
@@ -263,6 +268,11 @@ private:
         rclcpp::QoS(rclcpp::KeepLast(1)).reliable(),
         std::bind(&SupervisorNode::primary_driving_stack_subscription, this, placeholders::_1)
     );
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr common_fault_sub_ = this->create_subscription<std_msgs::msg::String>(
+        COMMON_FAULT_TOPIC,
+        rclcpp::QoS(rclcpp::KeepLast(1)).reliable(),
+        std::bind(&SupervisorNode::common_fault_subscription, this, placeholders::_1)
+    );
     std::unique_ptr<yasmin_viewer::YasminViewerPub> yasmin_pub_{};
 
     // states
@@ -317,7 +327,7 @@ public:
         exit(EXIT_SUCCESS);
     }
 
-    // ALL the states
+    // passing SELECTED STATE
     void selected_state_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->idleState_->set_next_state(msg->data);
         this->manualState_->set_next_state(msg->data);
@@ -326,14 +336,19 @@ public:
         this->emergencyStopState_->set_next_state(msg->data);
     }
 
-    // only MANUAL state
+    // passing MANUAL COMMANDS
     void manual_command_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->manualState_->set_manual_command(msg->data);
     }
 
-    // only ACTIVE state
+    // passing PRIMARY DRIVING STACK
     void primary_driving_stack_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->activeState_->set_primary_driving_stack_command(msg->data);
+    }
+
+    // passing COMMON FAULTS
+    void common_fault_subscription(const std_msgs::msg::String::SharedPtr msg) {
+        this->activeState_->set_common_fault(msg->data);
     }
 };
 
