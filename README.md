@@ -1,10 +1,10 @@
 # SupervisorNode
-The [Supervisor Node](#src/supervisor_node.cpp) is responsible for storing the overall health state of the vehicle through
+The [Supervisor Node](src/supervisor_node.cpp) is responsible for storing the overall health state of the vehicle through
 a finite state machine, which here has been implemented using YASMIN ([GitHub](https://github.com/uleroboticsgroup/yasmin)) library.
 The node's output is the state of the FSM and is published as a topic.
 Within the repository, two additional nodes are included for demonstration purposes:
-- [State Selector](#src/state_selector.cpp), which simulates state transitions of the FSM invoked externally;
-- [Failure Simulator](#src/failure_simulator.cpp), that provides some possibily errors the system can face with, stimulating respective responses by the machine.
+- [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally;
+- [Failure Simulator](src/failure_simulator.cpp), that provides some possibily errors the system can face with, stimulating respective responses by the machine.
 
 ## Definitions:
 - <u>Primary Driving Stack</u>: high-performance autonomous driving solution but prone to failures or potentially hazardous conditions;
