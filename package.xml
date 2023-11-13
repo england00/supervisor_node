@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>Supervisor Node for F1/10</description>
   <maintainer email="271539@studenti.unimore.it">Luca Inghilterra</maintainer>
-  <license>TODO: License declaration</license>  
+  <license>GNU GENERAL PUBLIC LICENSE</license>  
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>rclcpp</depend>
   <depend>rclpy</depend>
