@@ -61,3 +61,25 @@ The node implements the following state transitions:
 - **(A, M, ET) → (ES)**: a severe fault occurs;
 - **(ES) → (ET)**: the severe fault is resolved, and the node entered ES state from A or ET;
 - **(ES) → (M)**: the severe fault is resolved, and the node entered ES state from M.
+
+## Installation
+
+```shell
+# sourcing ros2 underlay (foxy distro in this case)
+$ source /opt/ros/foxy/setup.bash
+
+# clone packages 
+$ cd ~/ros2_ws/src
+$ git clone https://github.com/uleroboticsgroup/simple_node.git
+$ git clone https://github.com/uleroboticsgroup/yasmin.git
+$ git clone https://github.com/england00/SupervisorNode.git
+
+# installing dependencies
+$ cd yasmin
+$ pip3 install -r requirements.txt
+$ cd ../..
+$ cd rosdep install --ignore-src --from-paths src -y -r
+
+# building workspace
+$ colcon build
+```
