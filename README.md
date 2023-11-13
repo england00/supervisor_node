@@ -108,7 +108,7 @@ To function, the supervisor node communicates with the other available nodes thr
 
 To run the [Supervisor Node](src/supervisor_node.cpp) open one terminal window and follow these commands:
 ```shell
-$ cd ~/ros2_ws/src
+$ cd ~/ros2_ws
 $ source /opt/ros/foxy/setup.bash
 $ source install/local_setup.bash
 $ ros2 run supervisor_node supervisor_node
@@ -121,7 +121,7 @@ Within the repository, two additional nodes are included for working with the [S
 
 To run the demo open three terminal window and follow these commands for each one:
 ```shell
-$ cd ~/ros2_ws/src
+$ cd ~/ros2_ws
 $ source /opt/ros/foxy/setup.bash
 $ source install/local_setup.bash 
 ```
