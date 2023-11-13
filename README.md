@@ -1,7 +1,7 @@
 # SupervisorNode
 
 <p align="center">
-  <img src="./docs/logo.JPG" width="50%" />
+  <img src="./docs/logo.JPG" width="100%" />
 </p>
 
 The [Supervisor Node](src/supervisor_node.cpp) is responsible for storing the overall health state of the vehicle through
