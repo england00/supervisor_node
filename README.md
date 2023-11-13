@@ -5,13 +5,8 @@
 </p>
 
 The [Supervisor Node](src/supervisor_node.cpp) is responsible for storing the overall health state of the vehicle through
-a finite state machine, which here has been implemented using YASMIN ([GitHub](https://github.com/uleroboticsgroup/yasmin)) library.
+a finite state machine, which here has been implemented using YASMIN ([GitHub](https://github.com/uleroboticsgroup/yasmin)) library. 
 The node's output is the state of the FSM and is published as a topic.
-Within the repository, two additional nodes are included for demonstration purposes:
-- [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally;
-- [Failure Simulator](src/failure_simulator.cpp), that provides some possibily errors the system can face with, stimulating respective responses by the machine.
-
-In addition, there is also a [Launch File](launch/demo.py) for calling the execution of all the three nodes together with just a single command. 
 
 ## Table of Contents
 
@@ -21,6 +16,7 @@ In addition, there is also a [Launch File](launch/demo.py) for calling the execu
    - [Definitions](#definitions)
    - [States](#states)
    - [Transitions](#transitions)
+4. [Demo](#demo)
      
 ## Installation
 
@@ -92,3 +88,10 @@ The node implements the following state transitions:
 - **(A, M, ET) → (ES)**: a severe fault occurs;
 - **(ES) → (ET)**: the severe fault is resolved, and the node entered ES state from A or ET;
 - **(ES) → (M)**: the severe fault is resolved, and the node entered ES state from M.
+
+## Demo
+Within the repository, two additional nodes are included for demonstration purposes:
+- [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally;
+- [Failure Simulator](src/failure_simulator.cpp), that provides some possibily errors the system can face with, stimulating respective responses by the machine.
+
+In addition, there is also a [Launch File](launch/demo.py) for calling the execution of all the three nodes together with just a single command. 
