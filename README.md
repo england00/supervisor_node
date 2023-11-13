@@ -19,17 +19,17 @@ In addition, there is also a [Launch File](launch/demo.py) for calling the execu
         - [State Selector](src/state_selector.cpp)
         - [Supervisor Node](src/supervisor_node.cpp)
     
-
-## Definitions
-- <u>Primary Driving Stack</u>: high-performance autonomous driving solution but prone to failures or potentially hazardous conditions;
-- <u>Secondary Driving Stack</u>: less performant but more reliable and conservative autonomous driving solution;
-- <u>Common Failure</u>: a condition where autonomous driving with the primary stack cannot proceed, in which:
+## Specs
+### Definitions
+- **Primary Driving Stack**: high-performance autonomous driving solution but prone to failures or potentially hazardous conditions;
+- **Secondary Driving Stack**: less performant but more reliable and conservative autonomous driving solution;
+- **Common Failure**: a condition where autonomous driving with the primary stack cannot proceed, in which:
     - a critical node becomes unresponsive (misses a certain number of deadlines);
     - there is an identification of a risky situation for the vehicle (loss of grip, steering commands leading to a certain collision, etc.);
-- <u>Severe Failure</u>: a hardware component becomes unresponsive, so:
+- **Severe Failure**: a hardware component becomes unresponsive, so:
     - a failure in sensor or actuator drivers.
 
-## States
+### States
 The node implements the following states:
 - **Idle [I]**: the node is active and awaits signals from the outside;
 - **Manual [M]**: the vehicle is in manual driving mode:
@@ -43,7 +43,7 @@ The node implements the following states:
 - **Emergency Stop [ES]**: the vehicle is unable to move autonomously:
     - driving commands are ignored, and the vehicle is stopped in place.
  
-## Transition
+### Transition
 The node implements the following state transitions:
 - **(I) ←→ (M)**: service callable from the outside;
 - **(M) ←→ (A)**: service callable from the outside;
