@@ -50,7 +50,7 @@ $ colcon build
     - [CMake File](./CMakeLists.txt)
     - [Documents](./docs)
         - [Logo](docs/logo.JPG)
-        - [Specifications](docs/FSM-Specs.pdf)
+        - [Specifications File](docs/FSM-Specs.pdf)
     - [Launch Files](launch)
         - [Demo](launch/demo.py)
     - [Package XML](./package.xml)
