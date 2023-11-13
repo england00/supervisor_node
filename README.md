@@ -31,7 +31,7 @@ source /opt/ros/foxy/setup.bash
 cd ~/ros2_ws/src
 git clone https://github.com/uleroboticsgroup/simple_node.git
 git clone https://github.com/uleroboticsgroup/yasmin.git
-git clone https://github.com/england00/SupervisorNode.git
+git clone https://github.com/england00/supervisor_node.git
 ```
 
 - Installing dependencies:
