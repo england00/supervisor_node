@@ -44,7 +44,7 @@ rosdep install --ignore-src --from-paths src -y -r
 
 - Building the workspace:
 ```shell
-$ colcon build
+colcon build
 ```
 
 
