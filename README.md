@@ -1,4 +1,4 @@
-# SupervisorNode
+# Supervisor Node
 <p align="center">
   <img src="./docs/logo.JPG" width="100%" />
 </p>
