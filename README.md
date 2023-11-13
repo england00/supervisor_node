@@ -96,8 +96,8 @@ The node implements the following state transitions:
 
 ## Demo
 Within the repository, two additional nodes are included for working with the [Supervisor Node](src/supervisor_node.cpp) for a demonstration purpose:
-- [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally;
-- [Failure Simulator](src/failure_simulator.cpp), that provides some possibily errors the system can face with, stimulating respective responses by the machine.
+- [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally by keyboard inputs given by the user;
+- [Failure Simulator](src/failure_simulator.cpp), that automatically provides some possibily errors the system can face with, stimulating respective responses by the machine.
 
 To run the demo open three terminal window and follow these commands for each one:
 ```shell
