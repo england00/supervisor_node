@@ -5,6 +5,7 @@ The node's output is the state of the FSM and is published as a topic.
 Within the repository, two additional nodes are included for demonstration purposes:
 - [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally;
 - [Failure Simulator](src/failure_simulator.cpp), that provides some possibily errors the system can face with, stimulating respective responses by the machine.
+In addition, there is also a [Launch File](launch/demo.py) for calling the execution of all the three nodes together with one single command. 
 
 ## Definitions:
 - <u>Primary Driving Stack</u>: high-performance autonomous driving solution but prone to failures or potentially hazardous conditions;
