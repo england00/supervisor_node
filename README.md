@@ -101,7 +101,7 @@ The node implements the following state transitions:
 
 ## Usage
 To function, the supervisor node communicates with the other available nodes through the presence of the following topics:
-- *supervisor_node/state_selection*, in which it is **subscribed** to _change state_ with calls from an outer service;
+- *supervisor_node/state_selection*, in which it is **subscribed** to _change state_ with calls from an outer service (**note**: sending END state on this topic will terminate the execution of the node);
 - *supervisor_node/manual_command*, in which it is **subscribed** to receive notifications of _manual commands_ given by an outer service to the system;
 - *supervisor_node/primary_driving_stack*, in which it is **subscribed** to receive notifications of the execution of _Primary Driving Stack_ imposed by an outer service to the system;
 - *supervisor_node/current_state*, in which the _current state_ of the node FSM is **published** as output for any outer service.
