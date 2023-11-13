@@ -23,23 +23,23 @@ The node's output is the state of the FSM and is published as a topic.
 ## Installation
 - Sourcing ROS2 underlay (foxy distro in this case):
 ```shell
-$ source /opt/ros/foxy/setup.bash
+source /opt/ros/foxy/setup.bash
 ```
 
 - Cloning packages:
 ```shell
-$ cd ~/ros2_ws/src
-$ git clone https://github.com/uleroboticsgroup/simple_node.git
-$ git clone https://github.com/uleroboticsgroup/yasmin.git
-$ git clone https://github.com/england00/SupervisorNode.git
+cd ~/ros2_ws/src
+git clone https://github.com/uleroboticsgroup/simple_node.git
+git clone https://github.com/uleroboticsgroup/yasmin.git
+git clone https://github.com/england00/SupervisorNode.git
 ```
 
 - Installing dependencies:
 ```shell
-$ cd yasmin
-$ pip3 install -r requirements.txt
-$ cd ../..
-$ cd rosdep install --ignore-src --from-paths src -y -r
+cd yasmin
+pip3 install -r requirements.txt
+cd ../..
+cd rosdep install --ignore-src --from-paths src -y -r
 ```
 
 - Building the workspace:
@@ -108,10 +108,10 @@ To function, the supervisor node communicates with the other available nodes thr
 
 To run the [Supervisor Node](src/supervisor_node.cpp) open one terminal window and follow these commands:
 ```shell
-$ cd ~/ros2_ws
-$ source /opt/ros/foxy/setup.bash
-$ source install/local_setup.bash
-$ ros2 run supervisor_node supervisor_node
+cd ~/ros2_ws
+source /opt/ros/foxy/setup.bash
+source install/local_setup.bash
+ros2 run supervisor_node supervisor_node
 ```
 
 ## Demo
@@ -121,26 +121,26 @@ Within the repository, two additional nodes are included for working with the [S
 
 To run the demo open three terminal window and follow these commands for each one:
 ```shell
-$ cd ~/ros2_ws
-$ source /opt/ros/foxy/setup.bash
-$ source install/local_setup.bash 
+cd ~/ros2_ws
+source /opt/ros/foxy/setup.bash
+source install/local_setup.bash 
 ```
 - Terminal 1:
 ```shell
-$ ros2 run supervisor_node supervisor_node
+ros2 run supervisor_node supervisor_node
 ```
 - Terminal 2:
 ```shell
-$ ros2 run supervisor_node state_selector
+ros2 run supervisor_node state_selector
 ```
 - Terminal 3:
 ```shell
-$ ros2 run supervisor_node failure_simulator
+ros2 run supervisor_node failure_simulator
 ```
 
 Otherwise, a [Launch File](launch/demo.py) is provided for calling the execution of all the nodes together with just this single command: 
 ```shell
-$ ros2 launch supervisor_node demo.py
+ros2 launch supervisor_node demo.py
 ```
 In this case is added a further node execution, provided by [YASMIN](https://github.com/uleroboticsgroup/yasmin) library. 
 This last one, called Yasmin Viewer Node, enables a web service on [localhost](http://localhost:5000/) in which is represented the execution of current states and transitions of the FSM with a graph.
