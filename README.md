@@ -90,8 +90,8 @@ The node implements the following state transitions:
 - **(ES) → (M)**: the severe fault is resolved, and the node entered ES state from M.
 
 ## Demo
-Within the repository, two additional nodes are included for demonstration purposes:
+Within the repository, two additional nodes are included for working with the [Supervisor Node](src/supervisor_node.cpp) for a demonstration purpose:
 - [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally;
 - [Failure Simulator](src/failure_simulator.cpp), that provides some possibily errors the system can face with, stimulating respective responses by the machine.
 
-In addition, there is also a [Launch File](launch/demo.py) for calling the execution of all the three nodes together with just a single command. 
+So, a [Launch File](launch/demo.py) is provided for calling the execution of all the nodes together with just a single command. 
