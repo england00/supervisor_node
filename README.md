@@ -5,7 +5,7 @@
 </p>
 
 The [Supervisor Node](src/supervisor_node.cpp) is responsible for storing the overall health state of the vehicle through
-a finite state machine, which here has been implemented using YASMIN ([GitHub](https://github.com/uleroboticsgroup/yasmin)) library. 
+a finite state machine, which here has been implemented using [YASMIN](https://github.com/uleroboticsgroup/yasmin) library. 
 The node's output is the state of the FSM and is published as a topic.
 
 ## Table of Contents
@@ -122,3 +122,5 @@ Otherwise, a [Launch File](launch/demo.py) is provided for calling the execution
 ```shell
 $ ros2 launch supervisor_node demo.py
 ```
+In this case is added a further node execution, provided by [YASMIN](https://github.com/uleroboticsgroup/yasmin) library. 
+This node, called Yasmin Viewer Node, enables a web service on [localhost](http://localhost:5000/) in which is represented the execution of current states and transitions of the FSM with a graph.
