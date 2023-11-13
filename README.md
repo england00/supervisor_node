@@ -13,6 +13,16 @@ Within the repository, two additional nodes are included for demonstration purpo
 
 In addition, there is also a [Launch File](launch/demo.py) for calling the execution of all the three nodes together with just a single command. 
 
+## Table of Contents
+
+1. [Index](#index)
+2. [Installation](#installation)
+3. [Demos](#demos)
+   - [Python](#python)
+   - [Cpp](#cpp)
+4. [YASMIN Viewer](#yasmin-viewer)
+5. [Citations](#citations)
+
 ## Index
 - [SupervisorNode](.)
     - [CMake File](./CMakeLists.txt)
