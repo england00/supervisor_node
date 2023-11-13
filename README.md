@@ -16,6 +16,9 @@ In addition, there is also a [Launch File](launch/demo.py) for calling the execu
 ## Index
 - [SupervisorNode](.)
     - [CMake File](./CMakeLists.txt)
+    - [Documents](./docs)
+        - [Logo](docs/logo.JPG)
+        - [Specifications](docs/FSM-Specs.pdf)
     - [Launch Files](launch)
         - [Demo](launch/demo.py)
     - [Package XML](./package.xml)
