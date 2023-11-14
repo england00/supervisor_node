@@ -43,7 +43,7 @@ bool input_integer_checker(string &input, int floor, int ceiling) {
 
 
 /********************************************** State Selector Node ***************************************************/
-class StateSelector : public rclcpp::Node {
+class FailureSimulator : public rclcpp::Node {
 private:
     // parameters
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_state_subscription_{};
@@ -175,11 +175,11 @@ private:
 
 public:
     // constructor
-    StateSelector() : Node("state_selector_publisher") {
+    FailureSimulator() : Node("state_selector_publisher") {
         this->current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
                 CURRENT_STATE_TOPIC,
                 rclcpp::QoS(rclcpp::KeepLast(1)).transient_local(),
-                std::bind(&StateSelector::current_state_subscription, this, placeholders::_1)
+                std::bind(&FailureSimulator::current_state_subscription, this, placeholders::_1)
         );
         this->publish_state_selection_ = this->create_publisher<std_msgs::msg::String>(
                 STATE_SELECTION_TOPIC,
@@ -203,7 +203,7 @@ int main(int argc, char * argv[]) {
 
     // C++ idiomatic interface which provides all the ROS client functionality like creating nodes, publisher, and subscribers
     rclcpp::init(argc, argv);  // activation of rclcpp API
-    rclcpp::spin(std::make_shared<StateSelector>()); // node creation and spinning
+    rclcpp::spin(std::make_shared<FailureSimulator>()); // node creation and spinning
     rclcpp::shutdown();  // shutdown of rclcpp API
     return 0;
 }

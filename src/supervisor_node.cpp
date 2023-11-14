@@ -22,6 +22,7 @@
 #define END "END"
 
 #define SLEEP 100
+#define FAULT_ALERT_SLEEP 1000
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
@@ -39,12 +40,20 @@ void publishing(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const 
 }
 
 string timestamp(string command) {
-    char time_buffer[20];
-    auto millis = chrono::duration_cast<chrono::milliseconds>(
-            chrono::system_clock::now().time_since_epoch()) % 1000;
-    auto give_time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-    strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", localtime(&give_time));
-    sprintf(time_buffer, "%s.%03d", time_buffer, static_cast<int>(millis.count()));
+    // date and time
+    char time_buffer[50];  // buffer for date and current time
+    auto now = chrono::system_clock::now();  // current date
+    auto time = chrono::system_clock::to_time_t(now);  // current time
+    strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", localtime(&time));
+
+    // milliseconds
+    char millis_buffer[10]; // buffer for milliseconds
+    auto millis = chrono::duration_cast<chrono::milliseconds>(now.time_since_epoch()) % 1000;
+    snprintf(millis_buffer, sizeof(millis_buffer), ".%03d", static_cast<int>(millis.count()));
+
+    // concatenate the two buffers
+    strcat(time_buffer, millis_buffer);
+
     return "\n" + std::string(time_buffer) + " --> " + command;
 }
 
@@ -64,13 +73,18 @@ public:
     string execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         string stdout_message = "Executing state " + IdleState::to_string() + "\n\n"
                                 "The node is on and awaits signals from the outside.";
+        blackboard->set<string>("previous_state", IdleState::to_string());  // memorizing last state
         publishing(idle_state_pub_, IdleState::to_string());
 
         // state cycle
         do {
             system("clear");
+
+            // managing what printing on stdout
             cout << stdout_message << endl;
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+
+            // managing transitions
             if (this->next_state_ == M) {  // checking if MANUAL state has been selected
                 return "I>M";
             } else if (this->next_state_ == END) {  // checking if END state has been selected
@@ -102,6 +116,7 @@ public:
                                 "- no fault checks are performed;\n"
                                 "- all control commands provided by the primary and secondary stack are ignored.";
         string stdout_buffer;
+        blackboard->set<string>("previous_state", ManualState::to_string());  // memorizing last state
         publishing(manual_state_pub_, ManualState::to_string());
 
         // state cycle
@@ -114,9 +129,10 @@ public:
                 stdout_buffer = timestamp(this->manual_command_);
             }
             cout << stdout_buffer << endl;
-
             this->manual_command_ = "";  // cleaning latest command buffer
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+
+            // managing transitions
             if (this->next_state_ == I) {  // checking if IDLE state has been selected
                 return "M>I";
             } else if (this->next_state_ == A) {  // checking if ACTIVE state has been selected
@@ -149,6 +165,8 @@ public:
                                 "- fault checks are performed;\n"
                                 "- control is entrusted to the primary driving stack.";
         string stdout_buffer;
+        this->common_fault_.clear();
+        blackboard->set<string>("previous_state", ActiveState::to_string());  // memorizing last state
         publishing(active_state_pub_, ActiveState::to_string());
 
         // state cycle
@@ -161,11 +179,17 @@ public:
                 stdout_buffer = timestamp(this->primary_driving_stack_command_);
             }
             cout << stdout_buffer << endl;
-
-            // managing common fault
-
             this->primary_driving_stack_command_ = "";  // cleaning latest command buffer
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+
+            // managing common fault
+            if (!this->common_fault_.empty()) {  // adding the last command received
+                cout << timestamp(this->primary_driving_stack_command_) << endl;
+                this_thread::sleep_for(chrono::milliseconds(FAULT_ALERT_SLEEP));  // timer
+                return "A>ET";
+            }
+
+            // managing transitions
             if (this->next_state_ == M) {  // checking if MANUAL state has been selected
                 return "A>M";
             }
@@ -184,7 +208,7 @@ class EmergencyTakeoverState : public yasmin::State {
 private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr emergency_takeover_state_pub_{};
-    string next_state_;
+    string next_state_, common_fault_;
 
 public:
     // constructor
@@ -195,14 +219,16 @@ public:
         string stdout_message = "Executing state " + EmergencyTakeoverState::to_string() + "\n\n"
                                 "The vehicle is in a state of risk:\n"
                                 "- control is entrusted to the secondary driving stack.";
+        blackboard->set<string>("previous_state", EmergencyTakeoverState::to_string());  // memorizing last state
         publishing(emergency_takeover_state_pub_, EmergencyTakeoverState::to_string());
 
         // state cycle
         do {
             system("clear");
+
+            // managing what printing on stdout
             cout << stdout_message << endl;
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
-
         } while(true);
     }
 
@@ -227,14 +253,16 @@ public:
         string stdout_message = "Executing state " + EmergencyStopState::to_string() + "\n\n"
                                 "The vehicle is unable to move autonomously:\n"
                                 "- driving commands are ignored and the vehicle is brought to a stop.";
+        blackboard->set<string>("previous_state", EmergencyStopState::to_string());  // memorizing last state
         publishing(emergency_stop_state_pub_, EmergencyStopState::to_string());
 
         // state cycle
         do {
             system("clear");
+
+            // managing what printing on stdout
             cout << stdout_message << endl;
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
-
         } while(true);
     }
 
