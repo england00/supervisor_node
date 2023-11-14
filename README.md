@@ -58,8 +58,8 @@ colcon build
         - [Demo](launch/demo.py)
     - [Package XML](./package.xml)
     - [Source Files](src)
-        - [Failure Simulator](src/failure_simulator.cpp)
-        - [State Selector](src/state_selector.cpp)
+        - [External State Selector Node](src/external_state_selector_node.cpp)
+        - [Pub/Sub Simulator Node](src/pub_sub_simulator_node.cpp)
         - [Supervisor Node](src/supervisor_node.cpp)
 
 
@@ -116,8 +116,8 @@ ros2 run supervisor_node supervisor_node
 
 ## Demo
 Within the repository, two additional nodes are included for working with the [Supervisor Node](src/supervisor_node.cpp) for a demonstration purpose:
-- [State Selector](src/state_selector.cpp), which simulates state transitions of the FSM invoked externally by keyboard inputs given by the user;
-- [Failure Simulator](src/failure_simulator.cpp), that automatically provides some possibily errors the system can face with, stimulating respective responses by the machine.
+- [External State Selector Node](src/external_state_selector_node.cpp), which simulates normal state transitions of the FSM invoked externally by keyboard inputs given by the user;
+- [Pub/Sub Simulator Node](src/pub_sub_simulator_node.cpp), that automatically publishes and subscribes in all the available topics, simulating all the possible states and transitions in which the FSM can go through.
 
 To run the demo open three terminal window and follow these commands for each one:
 ```shell
@@ -131,11 +131,11 @@ ros2 run supervisor_node supervisor_node
 ```
 - Terminal 2:
 ```shell
-ros2 run supervisor_node state_selector
+ros2 run supervisor_node external_state_selector_node
 ```
 - Terminal 3:
 ```shell
-ros2 run supervisor_node failure_simulator
+ros2 run supervisor_node pub_sub_simulator_node
 ```
 
 Otherwise, a [Launch File](launch/demo.py) is provided for calling the execution of all the nodes together with just this single command: 

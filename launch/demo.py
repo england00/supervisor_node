@@ -16,8 +16,8 @@ def generate_launch_description():
             name='supervisor_node'
         ),
         launch.actions.ExecuteProcess(
-            cmd=['gnome-terminal', '-x', 'ros2', 'run', 'supervisor_node', 'state_selector'],
+            cmd=['gnome-terminal', '-x', 'ros2', 'run', 'supervisor_node', 'external_state_selector_node'],
             output='screen',
-            name='state_selector'
+            name='external_state_selector_node'
         )
     ])

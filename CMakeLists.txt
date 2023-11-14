@@ -47,16 +47,16 @@ ament_target_dependencies(supervisor_node ${DEPENDENCIES}) # works only for pack
 install(TARGETS supervisor_node DESTINATION lib/${PROJECT_NAME})
 
 # state selector node
-add_executable(state_selector src/state_selector.cpp)
-set(SOURCES src/state_selector.cpp)
-ament_target_dependencies(state_selector ${DEPENDENCIES}) # works only for packages found with 'find_package', links files included inside the script
-install(TARGETS state_selector DESTINATION lib/${PROJECT_NAME})
+add_executable(external_state_selector_node src/external_state_selector_node.cpp)
+set(SOURCES src/external_state_selector_node.cpp)
+ament_target_dependencies(external_state_selector_node ${DEPENDENCIES}) # works only for packages found with 'find_package', links files included inside the script
+install(TARGETS external_state_selector_node DESTINATION lib/${PROJECT_NAME})
 
 # state selector node
-add_executable(failure_simulator src/failure_simulator.cpp)
-set(SOURCES src/failure_simulator.cpp)
-ament_target_dependencies(failure_simulator ${DEPENDENCIES}) # works only for packages found with 'find_package', links files included inside the script
-install(TARGETS failure_simulator DESTINATION lib/${PROJECT_NAME})
+add_executable(pub_sub_simulator_node src/pub_sub_simulator_node.cpp)
+set(SOURCES src/pub_sub_simulator_node.cpp)
+ament_target_dependencies(pub_sub_simulator_node ${DEPENDENCIES}) # works only for packages found with 'find_package', links files included inside the script
+install(TARGETS pub_sub_simulator_node DESTINATION lib/${PROJECT_NAME})
 
 # install launch files.
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME}/)
