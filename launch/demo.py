@@ -19,5 +19,10 @@ def generate_launch_description():
             cmd=['gnome-terminal', '-x', 'ros2', 'run', 'supervisor_node', 'external_state_selector_node'],
             output='screen',
             name='external_state_selector_node'
+        ),
+        launch.actions.ExecuteProcess(
+            cmd=['gnome-terminal', '-x', 'ros2', 'run', 'supervisor_node', 'pub_sub_simulator_node'],
+            output='screen',
+            name='pub_sub_simulator_node'
         )
     ])

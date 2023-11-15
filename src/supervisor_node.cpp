@@ -79,6 +79,7 @@ public:
         // state cycle
         do {
             system("clear");
+            cout << "SUPERVISION NODE:\n" << endl;
 
             // managing what printing on stdout
             cout << stdout_message << endl;
@@ -122,6 +123,7 @@ public:
         // state cycle
         do {
             system("clear");
+            cout << "SUPERVISION NODE:\n" << endl;
 
             // managing what printing on stdout
             cout << stdout_message << endl;  // default output
@@ -172,6 +174,7 @@ public:
         // state cycle
         do {
             system("clear");
+            cout << "SUPERVISION NODE:\n" << endl;
 
             // managing what printing on stdout
             cout << stdout_message << endl;  // default output
@@ -225,6 +228,7 @@ public:
         // state cycle
         do {
             system("clear");
+            cout << "SUPERVISION NODE:\n" << endl;
 
             // managing what printing on stdout
             cout << stdout_message << endl;
@@ -259,6 +263,7 @@ public:
         // state cycle
         do {
             system("clear");
+            cout << "SUPERVISION NODE:\n" << endl;
 
             // managing what printing on stdout
             cout << stdout_message << endl;
@@ -349,7 +354,7 @@ public:
         // execute
         string outcome = fsm->execute(this->blackboard_);
         system("clear");
-        cout << outcome << " reached" << endl;
+        cout << "SUPERVISION NODE:\n\n" << outcome << " reached" << endl;
         publishing(this->current_state_pub_, END);
         this_thread::sleep_for(chrono::milliseconds(500));  // timer
         exit(EXIT_SUCCESS);
@@ -383,12 +388,11 @@ public:
 
 /******************************************************* Main *********************************************************/
 int main(int argc, char *argv[]) {
-    cout << "SUPERVISION NODE\n";
+    cout << "SUPERVISION NODE:\n" << endl;
 
     // C++ idiomatic interface which provides all the ROS client functionality like creating nodes, publisher, and subscribers
     rclcpp::init(argc, argv);  // activation of rclcpp API
-    auto node = std::make_shared<SupervisorNode>();  // node creation and spinning
-    node->join_spin();
+    rclcpp::spin(std::make_shared<SupervisorNode>());  // node creation and spinning
     rclcpp::shutdown();  // shutdown of rclcpp API
     return 0;
 }

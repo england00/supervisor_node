@@ -42,7 +42,7 @@ bool input_integer_checker(string &input, int floor, int ceiling) {
 }
 
 
-/********************************************** State Selector Node ***************************************************/
+/******************************************** External State Selector Node ********************************************/
 class ExternalStateSelectorNode : public rclcpp::Node {
 private:
     // parameters
@@ -59,6 +59,7 @@ private:
     void current_state_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->current_state_ = msg->data;
         system("clear");
+        cout << "EXTERNAL STATE SELECTOR NODE:\n" << endl;
 
         /// ---> polling publisher activation in a different thread
         if (this->current_state_ == A) {
@@ -83,6 +84,7 @@ private:
                     cin >> this->state_selection_;
                     cin.ignore();  // cleaning input buffer
                     system("clear");
+                    cout << "EXTERNAL STATE SELECTOR NODE:\n" << endl;
                     if (input_integer_checker(this->state_selection_, 1, 2))
                         check = true;
                 }
@@ -97,6 +99,7 @@ private:
                     cin >> this->state_selection_;
                     cin.ignore();  // cleaning input buffer
                     system("clear");
+                    cout << "EXTERNAL STATE SELECTOR NODE:\n" << endl;
                     if (input_integer_checker(this->state_selection_, 1, 6))
                         check = true;
                 }
@@ -106,6 +109,7 @@ private:
                     cin >> this->state_selection_;
                     cin.ignore();  // cleaning input buffer
                     system("clear");
+                    cout << "EXTERNAL STATE SELECTOR NODE:\n" << endl;
                     if (input_integer_checker(this->state_selection_, 1, 1)) {
                         check = true;
                     }
@@ -175,7 +179,7 @@ private:
 
 public:
     // constructor
-    ExternalStateSelectorNode() : Node("state_selector_publisher") {
+    ExternalStateSelectorNode() : Node("external_state_selector_node") {
         this->current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
             CURRENT_STATE_TOPIC,
             rclcpp::QoS(rclcpp::KeepLast(1)).transient_local(),
@@ -199,7 +203,7 @@ public:
 
 /******************************************************* Main *********************************************************/
 int main(int argc, char * argv[]) {
-    cout << "EXTERNAL STATE SELECTOR NODE\nFSM --> OFF\n" << endl;
+    cout << "EXTERNAL STATE SELECTOR NODE:\n\nFSM --> OFF\n" << endl;
 
     // C++ idiomatic interface which provides all the ROS client functionality like creating nodes, publisher, and subscribers
     rclcpp::init(argc, argv);  // activation of rclcpp API
