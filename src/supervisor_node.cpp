@@ -78,10 +78,9 @@ public:
 
         // state cycle
         do {
+            // managing what printing on stdout
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
-
-            // managing what printing on stdout
             cout << stdout_message << endl;
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
 
@@ -122,10 +121,9 @@ public:
 
         // state cycle
         do {
+            // managing what printing on stdout
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
-
-            // managing what printing on stdout
             cout << stdout_message << endl;  // default output
             if (!this->manual_command_.empty()) {  // adding the last command received
                 stdout_buffer = timestamp(this->manual_command_);
@@ -173,10 +171,9 @@ public:
 
         // state cycle
         do {
+            // managing what printing on stdout
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
-
-            // managing what printing on stdout
             cout << stdout_message << endl;  // default output
             if (!this->primary_driving_stack_command_.empty()) {  // adding the last command received
                 stdout_buffer = timestamp(this->primary_driving_stack_command_);
@@ -227,10 +224,9 @@ public:
 
         // state cycle
         do {
+            // managing what printing on stdout
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
-
-            // managing what printing on stdout
             cout << stdout_message << endl;
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
         } while(true);
@@ -262,10 +258,9 @@ public:
 
         // state cycle
         do {
+            // managing what printing on stdout
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
-
-            // managing what printing on stdout
             cout << stdout_message << endl;
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
         } while(true);
@@ -351,8 +346,10 @@ public:
             {"ES>ET", this->emergencyTakeoverState_->to_string()}
         });
 
-        // execute
+        // executing fsm
         string outcome = fsm->execute(this->blackboard_);
+
+        // managing what printing on stdout
         system("clear");
         cout << "SUPERVISION NODE:\n\n" << outcome << " reached" << endl;
         publishing(this->current_state_pub_, END);
@@ -388,6 +385,7 @@ public:
 
 /******************************************************* Main *********************************************************/
 int main(int argc, char *argv[]) {
+    // managing what printing on stdout
     cout << "SUPERVISION NODE:\n" << endl;
 
     // C++ idiomatic interface which provides all the ROS client functionality like creating nodes, publisher, and subscribers

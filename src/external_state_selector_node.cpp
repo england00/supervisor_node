@@ -72,7 +72,7 @@ private:
         bool check = false;
         if (this->current_state_ != END) {
             do {
-                cout << "FSM --> ON\n"
+                cout << "SUPERVISOR NODE --> ON\n"
                         "Current state: " << this->current_state_ <<
                         "\n\nType the digit of the option you want to choose:" << endl;
 
@@ -156,7 +156,7 @@ private:
                 }
             }
         } else {
-            cout << "FSM --> OFF" << endl;
+            cout << "SUPERVISOR NODE --> OFF" << endl;
             exit(EXIT_SUCCESS);
         }
     }
@@ -203,7 +203,8 @@ public:
 
 /******************************************************* Main *********************************************************/
 int main(int argc, char * argv[]) {
-    cout << "EXTERNAL STATE SELECTOR NODE:\n\nFSM --> OFF\n" << endl;
+    // managing what printing on stdout
+    cout << "EXTERNAL STATE SELECTOR NODE:\n\nSUPERVISOR NODE --> OFF\n" << endl;
 
     // C++ idiomatic interface which provides all the ROS client functionality like creating nodes, publisher, and subscribers
     rclcpp::init(argc, argv);  // activation of rclcpp API
