@@ -92,8 +92,14 @@ public:
         } while(true);
     }
 
-    void set_next_state(string str) {  this->next_state_ = str;  }
-    string to_string() {  return I;  }
+    /// --> the only way to exit from IDLE STATE is selecting the next state in which going
+    void set_next_state(string str) {
+        this->next_state_ = str;
+    }
+
+    string to_string() {
+        return I;
+    }
 };
 
 
@@ -140,8 +146,16 @@ public:
         } while(true);
     }
 
-    void set_next_state(string str) {  this->next_state_ = str;  }
-    void set_manual_command(string str) {  this->manual_command_ = str;  }
+    /// --> no functions for managing PRIMARY or SECONDARY STATE STACKS, which must be ignored
+    /// --> no functions for doing error checks
+    void set_next_state(string str) {
+        this->next_state_ = str;
+    }
+
+    void set_manual_command(string str) {
+        this->manual_command_ = str;
+    }
+
     string to_string() {  return M;  }
 };
 
@@ -195,10 +209,21 @@ public:
         } while(true);
     }
 
-    void set_next_state(string str) {  this->next_state_ = str;  }
-    void set_primary_driving_stack_command(string str) {  this->primary_driving_stack_command_ = str;  }
-    void set_common_fault(string str) {  this->common_fault_ = str;  }
-    string to_string() {  return A;  }
+    void set_next_state(string str) {
+        this->next_state_ = str;
+    }
+
+    void set_primary_driving_stack_command(string str) {
+        this->primary_driving_stack_command_ = str;
+    }
+
+    void set_common_fault(string str) {
+        this->common_fault_ = str;
+    }
+
+    string to_string() {
+        return A;
+    }
 };
 
 
@@ -231,8 +256,13 @@ public:
         } while(true);
     }
 
-    void set_next_state(string str) {  this->next_state_ = str;  }
-    string to_string() {  return ET;  }
+    void set_next_state(string str) {
+        this->next_state_ = str;
+    }
+
+    string to_string() {
+        return ET;
+    }
 };
 
 
@@ -265,8 +295,13 @@ public:
         } while(true);
     }
 
-    void set_next_state(string str) {  this->next_state_ = str;  }
-    string to_string() {  return ES;  }
+    void set_next_state(string str) {
+        this->next_state_ = str;
+    }
+
+    string to_string() {
+        return ES;
+    }
 };
 
 

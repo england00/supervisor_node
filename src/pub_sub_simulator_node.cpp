@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <mutex>
 #include <vector>
 #include <random>
 #include "rclcpp/rclcpp.hpp"
@@ -22,34 +23,31 @@
 #define END "END"
 #define GENERAL_SLEEP 100
 #define MANUAL_PUBLISHER_SLEEP 1000
+#define POLLING_PUBLISHER_SLEEP 100
 #define FAULT_ALERT_SLEEP 1000
 #define END_SLEEP 500
+#define N 2
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
 #define PRIMARY_DRIVING_STACK_TOPIC "supervisor_node/primary_driving_stack"
+#define SECONDARY_DRIVING_STACK_TOPIC "supervisor_node/secondary_driving_stack"
 #define COMMON_FAULT_TOPIC "supervisor_node/common_fault"
 #define SERIOUS_FAULT_TOPIC "supervisor_node/serious_fault"
 
 using namespace std;
 
-/***************************************************** Methods ********************************************************/
+/************************************************* Global Variables ***************************************************/
 atomic_bool stop_thread;
 
-void publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &msg) {
-    auto message = std_msgs::msg::String();
-    message.data = msg;
-    pub->publish(message);
-}
 
-void polling_publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &msg) {
-    auto message = std_msgs::msg::String();
-    stop_thread = false;
-    while (!stop_thread) {
-        message.data = msg;
-        pub->publish(message);
-        this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
-    }
+/***************************************************** Methods ********************************************************/
+
+int generateRandomInt(int min, int max) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(min, max);
+    return dis(gen);
 }
 
 string timestamp(string command) {
@@ -70,11 +68,10 @@ string timestamp(string command) {
     return "\nSent message on " + std::string(time_buffer) + ":\n --> " + command;
 }
 
-int generateRandomInt(int min, int max) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(min, max);
-    return dis(gen);
+void publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &msg) {
+    auto message = std_msgs::msg::String();
+    message.data = msg;
+    pub->publish(message);
 }
 
 
@@ -144,8 +141,8 @@ public:
             cout << "PUB/SUB SIMULATOR NODE:\n\n"
                     "SUPERVISOR NODE --> ON\n"
                     "Current state: " <<
-                    this->current_state_ << "\n\nPublishing MANUAL COMMANDS sent." << endl;
-            cout << timestamp(choose_manual_commands()) << endl;
+                    this->current_state_ << "\n\nPublishing MANUAL COMMANDS:" << endl;
+            cout << timestamp(this->choose_manual_commands()) << endl;
             this_thread::sleep_for(chrono::milliseconds(MANUAL_PUBLISHER_SLEEP));  // timer
 
             // managing transitions
@@ -189,11 +186,13 @@ public:
 class ActiveState : public yasmin::State {
 private:
     // parameters
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr primary_driving_stack_publisher_{};
     string current_state_ = A;
 
 public:
     // constructor
-    ActiveState() : yasmin::State({"A>M", "A>ET", "A>ES"}) {};
+    ActiveState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"A>M", "A>ET", "A>ES"}),
+                                                                            primary_driving_stack_publisher_(pub) {};
 
     /// methods
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
@@ -206,14 +205,21 @@ public:
             cout << "PUB/SUB SIMULATOR NODE:\n\n"
                     "SUPERVISOR NODE --> ON\n"
                     "Current state: " <<
-                 this->current_state_ << "\n\nPublishing PRIMARY DRIVING STACK stack." << endl;
-            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
+                    this->current_state_ << "\n\nPublishing PRIMARY DRIVING STACK:" << endl;
+            cout << timestamp(this->choose_primary_driving_stack()) << endl;
+            this_thread::sleep_for(chrono::milliseconds(POLLING_PUBLISHER_SLEEP));  // timer
 
             // managing transitions
             if (this->current_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
                 return "A>M";
             }
         } while(true);
+    }
+
+    string choose_primary_driving_stack() {
+        string command = "PRIMARY DRIVING STACK";
+        publisher(this->primary_driving_stack_publisher_, command);
+        return command;
     }
 
     void set_current_state(string str) {
@@ -245,14 +251,15 @@ private:
             PRIMARY_DRIVING_STACK_TOPIC,
             rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
     );
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_secondary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
+            SECONDARY_DRIVING_STACK_TOPIC,
+            rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
+    );
 
     // states
     std::shared_ptr<IdleState> idleState_ = std::make_shared<IdleState>();
     std::shared_ptr<ManualState> manualState_ = std::make_shared<ManualState>(this->publish_manual_command_);
-    std::shared_ptr<ActiveState> activeState_ = std::make_shared<ActiveState>();
-
-    // threads for simulation
-    thread primary_driving_stack_thread_;
+    std::shared_ptr<ActiveState> activeState_ = std::make_shared<ActiveState>(this->publish_primary_driving_stack_command_);
 
 public:
     // constructor
@@ -274,15 +281,8 @@ public:
                 {"A>M", this->manualState_->to_string()}
         });
 
-        // executing fsm and parallel threads
-        this->primary_driving_stack_thread_ = thread([this]() {  // opening new simulation thread
-            polling_publisher(this->publish_primary_driving_stack_command_, "PRIMARY DRIVING STACK");
-        });
+        // executing fsm
         fsm->execute(this->blackboard_);
-
-        // stopping parallel threads
-        stop_thread = true;
-        this->primary_driving_stack_thread_.join();
 
         // managing what printing on stdout
         system("clear");
