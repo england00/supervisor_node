@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 #include <thread>
-
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 
@@ -13,8 +12,6 @@
 #define ET "EMERGENCY TAKEOVER"
 #define ES "EMERGENCY STOP"
 #define END "END"
-
-#define SLEEP 5
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
@@ -59,13 +56,6 @@ private:
         this->current_state_ = msg->data;
         system("clear");
         cout << "EXTERNAL STATE SELECTOR NODE:\n" << endl;
-
-        /// ---> polling publisher activation in a different thread
-        if (this->current_state_ == A) {
-            this->timer_1_ = thread([this]() {  // opening new simulation thread
-                polling_publishing(this->publish_primary_driving_stack_command_, "PRIMARY DRIVING STACK");
-            });
-        }
 
         // selection cycle
         bool check = false;
@@ -131,9 +121,6 @@ private:
             }
             // from ACTIVE
             else if (this->current_state_ == A) {
-                /// ---> joining simulation thread
-                stop_thread = true;
-                this->timer_1_.join();
                 if (this->state_selection_ == "1") {
                     this->publishing(this->publish_state_selection_, M);
                 }
@@ -148,16 +135,6 @@ private:
         auto message = std_msgs::msg::String();
         message.data = msg;
         pub->publish(message);
-    }
-
-    static void polling_publishing(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &msg) {
-        auto message = std_msgs::msg::String();
-        stop_thread = false;
-        while (!stop_thread) {
-            message.data = msg;
-            pub->publish(message);
-            this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
-        }
     }
 
 public:

@@ -6,7 +6,6 @@
 #include <thread>
 #include <vector>
 #include <random>
-
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -21,10 +20,10 @@
 #define ET "EMERGENCY TAKEOVER"
 #define ES "EMERGENCY STOP"
 #define END "END"
-
-#define SLEEP 100
-#define MANUAL_SLEEP 1000
+#define GENERAL_SLEEP 100
+#define MANUAL_PUBLISHER_SLEEP 1000
 #define FAULT_ALERT_SLEEP 1000
+#define END_SLEEP 500
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
@@ -35,10 +34,22 @@
 using namespace std;
 
 /***************************************************** Methods ********************************************************/
-void publishing(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &msg) {
+atomic_bool stop_thread;
+
+void publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &msg) {
     auto message = std_msgs::msg::String();
     message.data = msg;
     pub->publish(message);
+}
+
+void polling_publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &msg) {
+    auto message = std_msgs::msg::String();
+    stop_thread = false;
+    while (!stop_thread) {
+        message.data = msg;
+        pub->publish(message);
+        this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
+    }
 }
 
 string timestamp(string command) {
@@ -89,7 +100,7 @@ public:
                     "SUPERVISOR NODE --> ON\n"
                     "Current state: " <<
                     this->current_state_ << "\n\n\"The node is on and awaits signals from the outside." << endl;
-            this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
             // managing transitions
             if (this->current_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
@@ -100,8 +111,13 @@ public:
         } while(true);
     }
 
-    void set_current_state(string str) {  this->current_state_ = str;  }
-    string to_string() {  return I;  }
+    void set_current_state(string str) {
+        this->current_state_ = str;
+    }
+
+    string to_string() {
+        return I;
+    }
 };
 
 
@@ -128,9 +144,9 @@ public:
             cout << "PUB/SUB SIMULATOR NODE:\n\n"
                     "SUPERVISOR NODE --> ON\n"
                     "Current state: " <<
-                    this->current_state_ << "\n\nPublishing manual commands." << endl;
+                    this->current_state_ << "\n\nPublishing MANUAL COMMANDS sent." << endl;
             cout << timestamp(choose_manual_commands()) << endl;
-            this_thread::sleep_for(chrono::milliseconds(MANUAL_SLEEP));  // timer
+            this_thread::sleep_for(chrono::milliseconds(MANUAL_PUBLISHER_SLEEP));  // timer
 
             // managing transitions
             if (this->current_state_ == I) {  // checking if SUPERVISOR NODE has switched to IDLE state
@@ -155,12 +171,17 @@ public:
         } else if (choise == 5) {
             command = "STOP";
         }
-        publishing(this->manual_commands_publisher_, command);
+        publisher(this->manual_commands_publisher_, command);
         return command;
     }
 
-    void set_current_state(string str) {  this->current_state_ = str;  }
-    string to_string() {  return M;  }
+    void set_current_state(string str) {
+        this->current_state_ = str;
+    }
+
+    string to_string() {
+        return M;
+    }
 };
 
 
@@ -185,8 +206,8 @@ public:
             cout << "PUB/SUB SIMULATOR NODE:\n\n"
                     "SUPERVISOR NODE --> ON\n"
                     "Current state: " <<
-                 this->current_state_ << "\n\nPublishing primary driving stack." << endl;
-            this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+                 this->current_state_ << "\n\nPublishing PRIMARY DRIVING STACK stack." << endl;
+            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
             // managing transitions
             if (this->current_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
@@ -195,8 +216,13 @@ public:
         } while(true);
     }
 
-    void set_current_state(string str) {  this->current_state_ = str;  }
-    string to_string() {  return A;  }
+    void set_current_state(string str) {
+        this->current_state_ = str;
+    }
+
+    string to_string() {
+        return A;
+    }
 };
 
 
@@ -208,7 +234,7 @@ private:
     // publishers and subscribers
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
             CURRENT_STATE_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).reliable(),
+            rclcpp::QoS(rclcpp::KeepLast(1)).transient_local(),
             std::bind(&PubSubSimulatorNode::current_state_subscription, this, placeholders::_1)
     );
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_manual_command_ = this->create_publisher<std_msgs::msg::String>(
@@ -224,6 +250,9 @@ private:
     std::shared_ptr<IdleState> idleState_ = std::make_shared<IdleState>();
     std::shared_ptr<ManualState> manualState_ = std::make_shared<ManualState>(this->publish_manual_command_);
     std::shared_ptr<ActiveState> activeState_ = std::make_shared<ActiveState>();
+
+    // threads for simulation
+    thread primary_driving_stack_thread_;
 
 public:
     // constructor
@@ -245,13 +274,20 @@ public:
                 {"A>M", this->manualState_->to_string()}
         });
 
-        // executing fsm
+        // executing fsm and parallel threads
+        this->primary_driving_stack_thread_ = thread([this]() {  // opening new simulation thread
+            polling_publisher(this->publish_primary_driving_stack_command_, "PRIMARY DRIVING STACK");
+        });
         fsm->execute(this->blackboard_);
+
+        // stopping parallel threads
+        stop_thread = true;
+        this->primary_driving_stack_thread_.join();
 
         // managing what printing on stdout
         system("clear");
         cout << "PUB/SUB SIMULATOR NODE:\n\nSUPERVISOR NODE --> OFF" << endl;
-        this_thread::sleep_for(chrono::milliseconds(500));  // timer
+        this_thread::sleep_for(chrono::milliseconds(END_SLEEP));  // timer
         exit(EXIT_SUCCESS);
     }
 

@@ -5,7 +5,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -20,9 +19,9 @@
 #define ET "EMERGENCY TAKEOVER"
 #define ES "EMERGENCY STOP"
 #define END "END"
-
-#define SLEEP 100
+#define GENERAL_SLEEP 100
 #define FAULT_ALERT_SLEEP 1000
+#define END_SLEEP 500
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
@@ -82,7 +81,7 @@ public:
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
             cout << stdout_message << endl;
-            this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
             // managing transitions
             if (this->next_state_ == M) {  // checking if MANUAL state has been selected
@@ -130,7 +129,7 @@ public:
             }
             cout << stdout_buffer << endl;
             this->manual_command_ = "";  // cleaning latest command buffer
-            this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
             // managing transitions
             if (this->next_state_ == I) {  // checking if IDLE state has been selected
@@ -180,7 +179,7 @@ public:
             }
             cout << stdout_buffer << endl;
             this->primary_driving_stack_command_ = "";  // cleaning latest command buffer
-            this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
             // managing common fault
             if (!this->common_fault_.empty()) {  // adding the last command received
@@ -228,7 +227,7 @@ public:
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
             cout << stdout_message << endl;
-            this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
         } while(true);
     }
 
@@ -262,7 +261,7 @@ public:
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
             cout << stdout_message << endl;
-            this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
         } while(true);
     }
 
@@ -353,7 +352,7 @@ public:
         system("clear");
         cout << "SUPERVISION NODE:\n\n" << outcome << " reached" << endl;
         publishing(this->current_state_pub_, END);
-        this_thread::sleep_for(chrono::milliseconds(500));  // timer
+        this_thread::sleep_for(chrono::milliseconds(END_SLEEP));  // timer
         exit(EXIT_SUCCESS);
     }
 
