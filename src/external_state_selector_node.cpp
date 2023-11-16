@@ -48,7 +48,6 @@ private:
     // parameters
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_state_subscription_{};
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_state_selection_{};
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_manual_command_{};
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_primary_driving_stack_command_{};
     string current_state_, state_selection_;
 
@@ -92,15 +91,11 @@ private:
                 else if (this->current_state_ == M) {
                     cout << "1. Pass to " + string(I) << endl;
                     cout << "2. Pass to " + string(A) << endl;
-                    cout << "3. Manual Command - GO STRAIGHT" << endl;
-                    cout << "4. Manual Command - TURN RIGHT" << endl;
-                    cout << "5. Manual Command - TURN LEFT" << endl;
-                    cout << "6. Manual Command - GO BACK" << endl;
                     cin >> this->state_selection_;
                     cin.ignore();  // cleaning input buffer
                     system("clear");
                     cout << "EXTERNAL STATE SELECTOR NODE:\n" << endl;
-                    if (input_integer_checker(this->state_selection_, 1, 6))
+                    if (input_integer_checker(this->state_selection_, 1, 2))
                         check = true;
                 }
                 // handling ACTIVE state
@@ -132,18 +127,6 @@ private:
                     this->publishing(this->publish_state_selection_, I);
                 } else if (this->state_selection_ == "2") {
                     this->publishing(this->publish_state_selection_, A);
-                } else if (this->state_selection_ == "3") {
-                    this->publishing(this->publish_manual_command_, "Command: GO STRAIGHT");
-                    current_state_subscription(msg);
-                } else if (this->state_selection_ == "4") {
-                    this->publishing(this->publish_manual_command_, "Command: TURN RIGHT");
-                    current_state_subscription(msg);
-                } else if (this->state_selection_ == "5") {
-                    this->publishing(this->publish_manual_command_, "Command: TURN LEFT");
-                    current_state_subscription(msg);
-                } else if (this->state_selection_ == "6") {
-                    this->publishing(this->publish_manual_command_, "Command: GO BACK");
-                    current_state_subscription(msg);
                 }
             }
             // from ACTIVE
@@ -187,10 +170,6 @@ public:
         );
         this->publish_state_selection_ = this->create_publisher<std_msgs::msg::String>(
             STATE_SELECTION_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
-        );
-        this->publish_manual_command_ = this->create_publisher<std_msgs::msg::String>(
-            MANUAL_COMMAND_TOPIC,
             rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
         );
         this->publish_primary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(

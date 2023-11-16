@@ -54,7 +54,7 @@ string timestamp(string command) {
     // concatenate the two buffers
     strcat(time_buffer, millis_buffer);
 
-    return "\n" + std::string(time_buffer) + " --> " + command;
+    return "\nReceived message on " + std::string(time_buffer) + ":\n --> " + command;
 }
 
 

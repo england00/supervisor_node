@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <random>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -22,6 +23,7 @@
 #define END "END"
 
 #define SLEEP 100
+#define MANUAL_SLEEP 1000
 #define FAULT_ALERT_SLEEP 1000
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
@@ -39,18 +41,42 @@ void publishing(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const 
     pub->publish(message);
 }
 
+string timestamp(string command) {
+    // date and time
+    char time_buffer[50];  // buffer for date and current time
+    auto now = chrono::system_clock::now();  // current date
+    auto time = chrono::system_clock::to_time_t(now);  // current time
+    strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", localtime(&time));
+
+    // milliseconds
+    char millis_buffer[10]; // buffer for milliseconds
+    auto millis = chrono::duration_cast<chrono::milliseconds>(now.time_since_epoch()) % 1000;
+    snprintf(millis_buffer, sizeof(millis_buffer), ".%03d", static_cast<int>(millis.count()));
+
+    // concatenate the two buffers
+    strcat(time_buffer, millis_buffer);
+
+    return "\nSent message on " + std::string(time_buffer) + ":\n --> " + command;
+}
+
+int generateRandomInt(int min, int max) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(min, max);
+    return dis(gen);
+}
+
 
 /**************************************************** Idle State ******************************************************/
 class IdleState : public yasmin::State {
 private:
     // parameters
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr idle_state_pub_{};
     string current_state_ = I;
 
 public:
     // constructor
-    IdleState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"I>M", "I>End"}),
-                                                                          idle_state_pub_(pub) {};
+    IdleState() : yasmin::State({"I>M", "I>End"}) {};
+
     /// methods
     string execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", IdleState::to_string());  // memorizing last state
@@ -83,13 +109,14 @@ public:
 class ManualState : public yasmin::State {
 private:
     // parameters
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr manual_state_pub_{};
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr manual_commands_publisher_{};
     string current_state_ = M;
 
 public:
     // constructor
     ManualState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"M>I", "M>A", "M>ES"}),
-                                                                            manual_state_pub_(pub) {};
+                                                                            manual_commands_publisher_(pub) {};
+
     /// methods
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", ManualState::to_string());  // memorizing last state
@@ -101,8 +128,9 @@ public:
             cout << "PUB/SUB SIMULATOR NODE:\n\n"
                     "SUPERVISOR NODE --> ON\n"
                     "Current state: " <<
-                    this->current_state_ << "\n\n\"Publishing manual commands." << endl;
-            this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
+                    this->current_state_ << "\n\nPublishing manual commands." << endl;
+            cout << timestamp(choose_manual_commands()) << endl;
+            this_thread::sleep_for(chrono::milliseconds(MANUAL_SLEEP));  // timer
 
             // managing transitions
             if (this->current_state_ == I) {  // checking if SUPERVISOR NODE has switched to IDLE state
@@ -111,6 +139,24 @@ public:
                 return "M>A";
             }
         } while(true);
+    }
+
+    string choose_manual_commands() {
+        int choise = generateRandomInt(1, 5);
+        string command;
+        if (choise == 1) {
+            command = "GO STRAIGHT";
+        } else if (choise == 2) {
+            command = "TURN RIGHT";
+        } else if (choise == 3) {
+            command = "TURN LEFT";
+        } else if (choise == 4) {
+            command = "GO BACK RIGHT";
+        } else if (choise == 5) {
+            command = "STOP";
+        }
+        publishing(this->manual_commands_publisher_, command);
+        return command;
     }
 
     void set_current_state(string str) {  this->current_state_ = str;  }
@@ -122,13 +168,12 @@ public:
 class ActiveState : public yasmin::State {
 private:
     // parameters
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr active_state_pub_{};
     string current_state_ = A;
 
 public:
     // constructor
-    ActiveState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"A>M", "A>ET", "A>ES"}),
-                                                                            active_state_pub_(pub) {};
+    ActiveState() : yasmin::State({"A>M", "A>ET", "A>ES"}) {};
+
     /// methods
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", ActiveState::to_string());  // memorizing last state
@@ -140,7 +185,7 @@ public:
             cout << "PUB/SUB SIMULATOR NODE:\n\n"
                     "SUPERVISOR NODE --> ON\n"
                     "Current state: " <<
-                 this->current_state_ << "\n\n\"Publishing primary driving stack." << endl;
+                 this->current_state_ << "\n\nPublishing primary driving stack." << endl;
             this_thread::sleep_for(chrono::milliseconds(SLEEP));  // timer
 
             // managing transitions
@@ -176,9 +221,9 @@ private:
     );
 
     // states
-    std::shared_ptr<IdleState> idleState_ = std::make_shared<IdleState>(this->publish_primary_driving_stack_command_);
-    std::shared_ptr<ManualState> manualState_ = std::make_shared<ManualState>(this->publish_primary_driving_stack_command_);
-    std::shared_ptr<ActiveState> activeState_ = std::make_shared<ActiveState>(this->publish_primary_driving_stack_command_);
+    std::shared_ptr<IdleState> idleState_ = std::make_shared<IdleState>();
+    std::shared_ptr<ManualState> manualState_ = std::make_shared<ManualState>(this->publish_manual_command_);
+    std::shared_ptr<ActiveState> activeState_ = std::make_shared<ActiveState>();
 
 public:
     // constructor
