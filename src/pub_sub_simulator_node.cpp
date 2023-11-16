@@ -23,10 +23,9 @@
 #define END "END"
 #define GENERAL_SLEEP 100
 #define MANUAL_PUBLISHER_SLEEP 1000
-#define POLLING_PUBLISHER_SLEEP 100
+#define POLLING_PUBLISHER_SLEEP 5
 #define FAULT_ALERT_SLEEP 1000
 #define END_SLEEP 500
-#define N 2
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
@@ -37,12 +36,7 @@
 
 using namespace std;
 
-/************************************************* Global Variables ***************************************************/
-atomic_bool stop_thread;
-
-
 /***************************************************** Methods ********************************************************/
-
 int generateRandomInt(int min, int max) {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -74,12 +68,18 @@ void publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const s
     pub->publish(message);
 }
 
+void end_execution() {
+    system("clear");
+    cout << "PUB/SUB SIMULATOR NODE:\n\nSUPERVISOR NODE --> OFF" << endl;
+    this_thread::sleep_for(chrono::milliseconds(END_SLEEP));  // timer
+    exit(EXIT_SUCCESS);
+}
 
 /**************************************************** Idle State ******************************************************/
 class IdleState : public yasmin::State {
 private:
     // parameters
-    string current_state_ = I;
+    string current_state_;
 
 public:
     // constructor
@@ -92,11 +92,13 @@ public:
         // state cycle
         do {
             // managing what printing on stdout
-            system("clear");
-            cout << "PUB/SUB SIMULATOR NODE:\n\n"
-                    "SUPERVISOR NODE --> ON\n"
-                    "Current state: " <<
-                    this->current_state_ << "\n\n\"The node is on and awaits signals from the outside." << endl;
+            if (!this->current_state_.empty()) {
+                system("clear");
+                cout << "PUB/SUB SIMULATOR NODE:\n\n"
+                        "SUPERVISOR NODE --> ON\n"
+                        "Current state: " <<
+                     this->current_state_ << "\n\n\"The node is on and awaits signals from the outside." << endl;
+            }
             this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
             // managing transitions
@@ -105,7 +107,11 @@ public:
             } else if (this->current_state_ == END) {  // checking if SUPERVISOR NODE has switched to END state
                 return "I>End";
             }
-        } while(true);
+        } while(this->current_state_ != END);
+
+        // emergency exit
+        end_execution();
+        return "#";
     }
 
     void set_current_state(string str) {
@@ -123,7 +129,7 @@ class ManualState : public yasmin::State {
 private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr manual_commands_publisher_{};
-    string current_state_ = M;
+    string current_state_;
 
 public:
     // constructor
@@ -151,7 +157,11 @@ public:
             } else if (this->current_state_ == A) {  // checking if SUPERVISOR NODE has switched to ACTIVE state
                 return "M>A";
             }
-        } while(true);
+        } while(this->current_state_ != END);
+
+        // emergency exit
+        end_execution();
+        return "#";
     }
 
     string choose_manual_commands() {
@@ -187,7 +197,7 @@ class ActiveState : public yasmin::State {
 private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr primary_driving_stack_publisher_{};
-    string current_state_ = A;
+    string current_state_;
 
 public:
     // constructor
@@ -213,7 +223,11 @@ public:
             if (this->current_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
                 return "A>M";
             }
-        } while(true);
+        } while(this->current_state_ != END);
+
+        // emergency exit
+        end_execution();
+        return "#";
     }
 
     string choose_primary_driving_stack() {
@@ -235,37 +249,47 @@ public:
 /********************************************** Pub/Sub Simulator Node ************************************************/
 class PubSubSimulatorNode : public simple_node::Node {
 private:
+    // blackboard
     std::shared_ptr<yasmin::blackboard::Blackboard> blackboard_ = std::make_shared<yasmin::blackboard::Blackboard>();
 
     // publishers and subscribers
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
-            CURRENT_STATE_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).transient_local(),
-            std::bind(&PubSubSimulatorNode::current_state_subscription, this, placeholders::_1)
-    );
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_manual_command_ = this->create_publisher<std_msgs::msg::String>(
-            MANUAL_COMMAND_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
-    );
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_primary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
-            PRIMARY_DRIVING_STACK_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
-    );
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_secondary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
-            SECONDARY_DRIVING_STACK_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
-    );
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_state_subscription_ = nullptr;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_manual_command_ = nullptr;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_primary_driving_stack_command_ = nullptr;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_secondary_driving_stack_command_ = nullptr;
 
     // states
-    std::shared_ptr<IdleState> idleState_ = std::make_shared<IdleState>();
-    std::shared_ptr<ManualState> manualState_ = std::make_shared<ManualState>(this->publish_manual_command_);
-    std::shared_ptr<ActiveState> activeState_ = std::make_shared<ActiveState>(this->publish_primary_driving_stack_command_);
+    std::shared_ptr<IdleState> idleState_ = nullptr;
+    std::shared_ptr<ManualState> manualState_ = nullptr;
+    std::shared_ptr<ActiveState> activeState_ = nullptr;
 
 public:
     // constructor
     PubSubSimulatorNode() : simple_node::Node("pub_sub_simulator_node") {
 
+        // publishers and subscribers
+        this->current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
+                CURRENT_STATE_TOPIC,
+                rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local(),
+                std::bind(&PubSubSimulatorNode::current_state_subscription, this, placeholders::_1)
+        );
+        this->publish_manual_command_ = this->create_publisher<std_msgs::msg::String>(
+                MANUAL_COMMAND_TOPIC,
+                rclcpp::QoS(rclcpp::KeepLast(10)).reliable()
+        );
+        this->publish_primary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
+                PRIMARY_DRIVING_STACK_TOPIC,
+                rclcpp::QoS(rclcpp::KeepLast(10)).reliable().deadline(rclcpp::Duration(0.1))
+        );
+        this->publish_secondary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
+                SECONDARY_DRIVING_STACK_TOPIC,
+                rclcpp::QoS(rclcpp::KeepLast(10)).reliable()
+        );
+
         // create a finite state machine
+        this->idleState_ = std::make_shared<IdleState>();
+        this->manualState_ = std::make_shared<ManualState>(this->publish_manual_command_);
+        this->activeState_ = std::make_shared<ActiveState>(this->publish_primary_driving_stack_command_);
         auto fsm = std::make_shared<yasmin::StateMachine>(yasmin::StateMachine({END}));
 
         // add states
@@ -284,11 +308,8 @@ public:
         // executing fsm
         fsm->execute(this->blackboard_);
 
-        // managing what printing on stdout
-        system("clear");
-        cout << "PUB/SUB SIMULATOR NODE:\n\nSUPERVISOR NODE --> OFF" << endl;
-        this_thread::sleep_for(chrono::milliseconds(END_SLEEP));  // timer
-        exit(EXIT_SUCCESS);
+        // exit
+        end_execution();
     }
 
     // passing SUPERVISOR NODE CURRENT STATE

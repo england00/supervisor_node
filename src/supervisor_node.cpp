@@ -56,6 +56,13 @@ string timestamp(string command) {
     return "\nReceived message on " + std::string(time_buffer) + ":\n --> " + command;
 }
 
+void end_execution(string outcome) {
+    system("clear");
+    cout << "SUPERVISION NODE:\n\n" << outcome << " reached" << endl;
+    this_thread::sleep_for(chrono::milliseconds(END_SLEEP));  // timer
+    exit(EXIT_SUCCESS);
+}
+
 
 /**************************************************** Idle State ******************************************************/
 class IdleState : public yasmin::State {
@@ -313,26 +320,26 @@ private:
     // publishers and subscribers
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr current_state_pub_ = this->create_publisher<std_msgs::msg::String>(
         CURRENT_STATE_TOPIC,
-        rclcpp::QoS(rclcpp::KeepLast(1)).transient_local()
+        rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local()
     );
+
+
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr selected_state_sub_ = this->create_subscription<std_msgs::msg::String>(
         STATE_SELECTION_TOPIC,
-        rclcpp::QoS(rclcpp::KeepLast(1)).reliable(),
+        rclcpp::QoS(rclcpp::KeepLast(10)).reliable(),
         std::bind(&SupervisorNode::selected_state_subscription, this, placeholders::_1)
     );
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr manual_command_sub_ = this->create_subscription<std_msgs::msg::String>(
         MANUAL_COMMAND_TOPIC,
-        rclcpp::QoS(rclcpp::KeepLast(1)).reliable(),
+        rclcpp::QoS(rclcpp::KeepLast(10)).reliable(),
         std::bind(&SupervisorNode::manual_command_subscription, this, placeholders::_1)
     );
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr primary_driving_stack_sub_ = this->create_subscription<std_msgs::msg::String>(
-        PRIMARY_DRIVING_STACK_TOPIC,
-        rclcpp::QoS(rclcpp::KeepLast(1)).reliable(),
-        std::bind(&SupervisorNode::primary_driving_stack_subscription, this, placeholders::_1)
-    );
+
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr primary_driving_stack_sub_ = nullptr;
+
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr common_fault_sub_ = this->create_subscription<std_msgs::msg::String>(
         COMMON_FAULT_TOPIC,
-        rclcpp::QoS(rclcpp::KeepLast(1)).reliable(),
+        rclcpp::QoS(rclcpp::KeepLast(10)).reliable(),
         std::bind(&SupervisorNode::common_fault_subscription, this, placeholders::_1)
     );
     std::unique_ptr<yasmin_viewer::YasminViewerPub> yasmin_pub_{};
@@ -347,6 +354,32 @@ private:
 public:
     // constructor
     SupervisorNode() : simple_node::Node("supervisor_node") {
+
+        chrono::milliseconds deadline_time(1000);
+        chrono::milliseconds liveliness_lease_duration(2000);
+
+        rclcpp::QoS qos_profile(rclcpp::KeepLast(10));  // queue dimension
+        qos_profile.reliable();  // tipe of communication
+        qos_profile.deadline(deadline_time);
+        //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(liveliness_lease_duration);
+
+        // rclcpp::QoS(rclcpp::KeepLast(10)).reliable().deadline(rclcpp::Duration(0.1))
+
+        this->primary_driving_stack_sub_ = this->create_subscription<std_msgs::msg::String>(
+                PRIMARY_DRIVING_STACK_TOPIC,
+                rclcpp::QoS(rclcpp::KeepLast(10)).reliable().deadline(rclcpp::Duration(0.1)),
+                std::bind(&SupervisorNode::primary_driving_stack_subscription, this, placeholders::_1)
+        );
+
+
+        // Aggiungi il gestore per l'evento di deadline mancata
+        /*
+        this->primary_driving_stack_sub_->on_deadline_missed(
+                [this]() {
+                    RCLCPP_WARN(get_logger(), "Deadline missed for primary_driving_stack_topic!");
+                    // Puoi gestire le azioni appropriate qui, ad esempio, pubblicare un messaggio di allarme
+                });
+                */
 
         // create a finite state machine
         auto fsm = std::make_shared<yasmin::StateMachine>(yasmin::StateMachine({END}));
@@ -383,12 +416,9 @@ public:
         // executing fsm
         string outcome = fsm->execute(this->blackboard_);
 
-        // managing what printing on stdout
-        system("clear");
-        cout << "SUPERVISION NODE:\n\n" << outcome << " reached" << endl;
+        // exit
         publishing(this->current_state_pub_, END);
-        this_thread::sleep_for(chrono::milliseconds(END_SLEEP));  // timer
-        exit(EXIT_SUCCESS);
+        end_execution(outcome);
     }
 
     // passing SELECTED STATE

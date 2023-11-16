@@ -13,14 +13,10 @@
 #define END "END"
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
-#define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
-#define PRIMARY_DRIVING_STACK_TOPIC "supervisor_node/primary_driving_stack"
 
 using namespace std;
 
 /**************************************************** Methods *********************************************************/
-atomic_bool stop_thread;
-
 bool input_integer_checker(string &input, int floor, int ceiling) {
     int number;
     std::istringstream iss(input);
@@ -37,6 +33,11 @@ bool input_integer_checker(string &input, int floor, int ceiling) {
     }
 }
 
+void end_execution() {
+    cout << "SUPERVISOR NODE --> OFF" << endl;
+    exit(EXIT_SUCCESS);
+}
+
 
 /******************************************** External State Selector Node ********************************************/
 class ExternalStateSelectorNode : public rclcpp::Node {
@@ -44,11 +45,7 @@ private:
     // parameters
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_state_subscription_{};
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_state_selection_{};
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_primary_driving_stack_command_{};
     string current_state_, state_selection_;
-
-    // different threads for simulation
-    thread timer_1_;
 
     // methods
     void current_state_subscription(const std_msgs::msg::String::SharedPtr msg) {
@@ -125,8 +122,8 @@ private:
                 }
             }
         } else {
-            cout << "SUPERVISOR NODE --> OFF" << endl;
-            exit(EXIT_SUCCESS);
+            // exit
+            end_execution();
         }
     }
 
@@ -141,16 +138,12 @@ public:
     ExternalStateSelectorNode() : Node("external_state_selector_node") {
         this->current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
             CURRENT_STATE_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).transient_local(),
+            rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local(),
             std::bind(&ExternalStateSelectorNode::current_state_subscription, this, placeholders::_1)
         );
         this->publish_state_selection_ = this->create_publisher<std_msgs::msg::String>(
             STATE_SELECTION_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
-        );
-        this->publish_primary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
-            PRIMARY_DRIVING_STACK_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
+            rclcpp::QoS(rclcpp::KeepLast(10)).reliable()
         );
     }
 };
