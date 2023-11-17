@@ -72,10 +72,10 @@ private:
     string next_state_;
 
 public:
-    // constructor
+    /// constructor
     IdleState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"I>M", "I>End"}),
                                                                           idle_state_pub_(pub) {};
-    /// methods
+    /// execution
     string execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         string stdout_message = "Executing state " + IdleState::to_string() + "\n\n"
                                 "The node is on and awaits signals from the outside.";
@@ -100,13 +100,10 @@ public:
     }
 
     /// --> the only way to exit from IDLE STATE is selecting the next state in which going
-    void set_next_state(string str) {
-        this->next_state_ = str;
-    }
 
-    string to_string() {
-        return I;
-    }
+    /// other methods
+    void set_next_state(string str) {  this->next_state_ = str;  }
+    string to_string() {  return I;  }
 };
 
 
@@ -118,10 +115,10 @@ private:
     string next_state_, manual_command_;
 
 public:
-    // constructor
+    /// constructor
     ManualState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"M>I", "M>A", "M>ES"}),
                                                                             manual_state_pub_(pub) {};
-    /// methods
+    /// execution
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         string stdout_message = "Executing state " + ManualState::to_string() + "\n\n"
                                 "The vehicle is in manual driving mode, therefore:\n"
@@ -155,14 +152,10 @@ public:
 
     /// --> no functions for managing PRIMARY or SECONDARY STATE STACKS, which must be ignored
     /// --> no functions for doing error checks
-    void set_next_state(string str) {
-        this->next_state_ = str;
-    }
 
-    void set_manual_command(string str) {
-        this->manual_command_ = str;
-    }
-
+    /// other methods
+    void set_next_state(string str) {  this->next_state_ = str;  }
+    void set_manual_command(string str) {  this->manual_command_ = str;  }
     string to_string() {  return M;  }
 };
 
@@ -175,10 +168,10 @@ private:
     string next_state_, primary_driving_stack_command_, common_fault_;
 
 public:
-    // constructor
+    /// constructor
     ActiveState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"A>M", "A>ET", "A>ES"}),
                                                                             active_state_pub_(pub) {};
-    /// methods
+    /// execution
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         string stdout_message = "Executing state " + ActiveState::to_string() + "\n\n"
                                 "The vehicle is in autonomous driving mode, therefore:\n"
@@ -216,21 +209,11 @@ public:
         } while(true);
     }
 
-    void set_next_state(string str) {
-        this->next_state_ = str;
-    }
-
-    void set_primary_driving_stack_command(string str) {
-        this->primary_driving_stack_command_ = str;
-    }
-
-    void set_common_fault(string str) {
-        this->common_fault_ = str;
-    }
-
-    string to_string() {
-        return A;
-    }
+    /// other methods
+    void set_next_state(string str) {  this->next_state_ = str;  }
+    void set_primary_driving_stack_command(string str) {  this->primary_driving_stack_command_ = str;  }
+    void set_common_fault(string str) {  this->common_fault_ = str;  }
+    string to_string() {  return A;  }
 };
 
 
@@ -242,10 +225,10 @@ private:
     string next_state_, common_fault_;
 
 public:
-    // constructor
+    /// constructor
     EmergencyTakeoverState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"ET>M", "ET>A", "ET>ES"}),
                                                                                        emergency_takeover_state_pub_(pub) {};
-    /// methods
+    /// execution
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         string stdout_message = "Executing state " + EmergencyTakeoverState::to_string() + "\n\n"
                                 "The vehicle is in a state of risk:\n"
@@ -263,13 +246,9 @@ public:
         } while(true);
     }
 
-    void set_next_state(string str) {
-        this->next_state_ = str;
-    }
-
-    string to_string() {
-        return ET;
-    }
+    /// other methods
+    void set_next_state(string str) {  this->next_state_ = str;  }
+    string to_string() {  return ET;  }
 };
 
 
@@ -281,7 +260,7 @@ private:
     string next_state_;
 
 public:
-    // constructor
+    /// constructor
     EmergencyStopState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"ES>M", "ES>ET"}),
                                                                                    emergency_stop_state_pub_(pub) {};
     /// methods
@@ -302,13 +281,9 @@ public:
         } while(true);
     }
 
-    void set_next_state(string str) {
-        this->next_state_ = str;
-    }
-
-    string to_string() {
-        return ES;
-    }
+    /// other methods
+    void set_next_state(string str) {  this->next_state_ = str;  }
+    string to_string() {  return ES;  }
 };
 
 
@@ -318,30 +293,20 @@ private:
     std::shared_ptr<yasmin::blackboard::Blackboard> blackboard_ = std::make_shared<yasmin::blackboard::Blackboard>();
 
     // publishers and subscribers
+    /// CURRENT STATE PUBLISHER
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr current_state_pub_ = this->create_publisher<std_msgs::msg::String>(
         CURRENT_STATE_TOPIC,
         rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local()
     );
-
-
+    /// SELECTED STATE SUBSCRIPTION
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr selected_state_sub_ = this->create_subscription<std_msgs::msg::String>(
         STATE_SELECTION_TOPIC,
         rclcpp::QoS(rclcpp::KeepLast(10)).reliable(),
         std::bind(&SupervisorNode::selected_state_subscription, this, placeholders::_1)
     );
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr manual_command_sub_ = this->create_subscription<std_msgs::msg::String>(
-        MANUAL_COMMAND_TOPIC,
-        rclcpp::QoS(rclcpp::KeepLast(10)).reliable(),
-        std::bind(&SupervisorNode::manual_command_subscription, this, placeholders::_1)
-    );
-
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr manual_command_sub_ = nullptr;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr primary_driving_stack_sub_ = nullptr;
-
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr common_fault_sub_ = this->create_subscription<std_msgs::msg::String>(
-        COMMON_FAULT_TOPIC,
-        rclcpp::QoS(rclcpp::KeepLast(10)).reliable(),
-        std::bind(&SupervisorNode::common_fault_subscription, this, placeholders::_1)
-    );
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr common_fault_sub_ = nullptr;
     std::unique_ptr<yasmin_viewer::YasminViewerPub> yasmin_pub_{};
 
     // states
@@ -352,34 +317,41 @@ private:
     std::shared_ptr<EmergencyStopState> emergencyStopState_ = std::make_shared<EmergencyStopState>(this->current_state_pub_);
 
 public:
-    // constructor
+    /// constructor
     SupervisorNode() : simple_node::Node("supervisor_node") {
 
-        chrono::milliseconds deadline_time(1000);
-        chrono::milliseconds liveliness_lease_duration(2000);
-
+        // quality of service and subscription options
         rclcpp::QoS qos_profile(rclcpp::KeepLast(10));  // queue dimension
-        qos_profile.reliable();  // tipe of communication
-        qos_profile.deadline(deadline_time);
-        //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(liveliness_lease_duration);
+        qos_profile.reliable();  // type of communication
+        rclcpp::SubscriptionOptions subscription_options;
+        subscription_options.event_callbacks.deadline_callback = [](rclcpp::QOSDeadlineRequestedInfo &event) -> void {
+            // managing MISSED DEADLINE
+            system("clear");
+            cout << "Deadline missed - total " << event.total_count << " (delta " << event.total_count_change << ")" << endl;
+        };
+        subscription_options.event_callbacks.liveliness_callback = [](rclcpp::QOSLivelinessChangedInfo& event) -> void {
+            // managing CHANGED LIVELINESS
+            system("clear");
+            cout << "Liveliness changed - alive " << event.alive_count << " (delta " << event.alive_count_change << "), "
+                    "not alive " << event.not_alive_count << " (delta " << event.not_alive_count_change << ")" << endl;
+        };
 
-        // rclcpp::QoS(rclcpp::KeepLast(10)).reliable().deadline(rclcpp::Duration(0.1))
-
-        this->primary_driving_stack_sub_ = this->create_subscription<std_msgs::msg::String>(
-                PRIMARY_DRIVING_STACK_TOPIC,
-                rclcpp::QoS(rclcpp::KeepLast(10)).reliable().deadline(rclcpp::Duration(0.1)),
-                std::bind(&SupervisorNode::primary_driving_stack_subscription, this, placeholders::_1)
+        /// MANUAL COMMANDS SUBSCRIPTION
+        this->manual_command_sub_ = this->create_subscription<std_msgs::msg::String>(MANUAL_COMMAND_TOPIC, qos_profile,
+            std::bind(&SupervisorNode::manual_command_subscription, this, placeholders::_1)
         );
-
-
-        // Aggiungi il gestore per l'evento di deadline mancata
-        /*
-        this->primary_driving_stack_sub_->on_deadline_missed(
-                [this]() {
-                    RCLCPP_WARN(get_logger(), "Deadline missed for primary_driving_stack_topic!");
-                    // Puoi gestire le azioni appropriate qui, ad esempio, pubblicare un messaggio di allarme
-                });
-                */
+        /// COMMON FAULTS SUBSCRIPTION
+        this->common_fault_sub_ = this->create_subscription<std_msgs::msg::String>(COMMON_FAULT_TOPIC, qos_profile,
+            std::bind(&SupervisorNode::common_fault_subscription, this, placeholders::_1)
+        );
+        /// PRIMARY DRIVING STACK SUBSCRIPTION
+        qos_profile.deadline(chrono::milliseconds(9));
+        //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(chrono::milliseconds(2000));
+        this->primary_driving_stack_sub_ = this->create_subscription<std_msgs::msg::String>(PRIMARY_DRIVING_STACK_TOPIC,
+            qos_profile,
+            std::bind(&SupervisorNode::primary_driving_stack_subscription, this, placeholders::_1),
+            subscription_options
+        );
 
         // create a finite state machine
         auto fsm = std::make_shared<yasmin::StateMachine>(yasmin::StateMachine({END}));
@@ -421,6 +393,7 @@ public:
         end_execution(outcome);
     }
 
+    /// other methods
     // passing SELECTED STATE
     void selected_state_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->idleState_->set_next_state(msg->data);
@@ -429,17 +402,14 @@ public:
         this->emergencyTakeoverState_->set_next_state(msg->data);
         this->emergencyStopState_->set_next_state(msg->data);
     }
-
     // passing MANUAL COMMANDS
     void manual_command_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->manualState_->set_manual_command(msg->data);
     }
-
     // passing PRIMARY DRIVING STACK
     void primary_driving_stack_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->activeState_->set_primary_driving_stack_command(msg->data);
     }
-
     // passing COMMON FAULTS
     void common_fault_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->activeState_->set_common_fault(msg->data);

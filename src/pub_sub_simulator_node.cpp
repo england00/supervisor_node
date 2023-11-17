@@ -82,10 +82,10 @@ private:
     string current_state_;
 
 public:
-    // constructor
+    /// constructor
     IdleState() : yasmin::State({"I>M", "I>End"}) {};
 
-    /// methods
+    /// execution
     string execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", IdleState::to_string());  // memorizing last state
 
@@ -114,13 +114,9 @@ public:
         return "#";
     }
 
-    void set_current_state(string str) {
-        this->current_state_ = str;
-    }
-
-    string to_string() {
-        return I;
-    }
+    /// other methods
+    void set_current_state(string str) {  this->current_state_ = str;  }
+    string to_string() {  return I;  }
 };
 
 
@@ -132,11 +128,10 @@ private:
     string current_state_;
 
 public:
-    // constructor
+    /// constructor
     ManualState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"M>I", "M>A", "M>ES"}),
                                                                             manual_commands_publisher_(pub) {};
-
-    /// methods
+    /// execution
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", ManualState::to_string());  // memorizing last state
 
@@ -164,31 +159,20 @@ public:
         return "#";
     }
 
+    /// other methods
     string choose_manual_commands() {
         int choise = generateRandomInt(1, 5);
         string command;
-        if (choise == 1) {
-            command = "GO STRAIGHT";
-        } else if (choise == 2) {
-            command = "TURN RIGHT";
-        } else if (choise == 3) {
-            command = "TURN LEFT";
-        } else if (choise == 4) {
-            command = "GO BACK RIGHT";
-        } else if (choise == 5) {
-            command = "STOP";
-        }
+        if (choise == 1) {  command = "GO STRAIGHT";  }
+        else if (choise == 2) {  command = "TURN RIGHT";  }
+        else if (choise == 3) {  command = "TURN LEFT";  }
+        else if (choise == 4) {  command = "GO BACK RIGHT";  }
+        else if (choise == 5) {  command = "STOP";  }
         publisher(this->manual_commands_publisher_, command);
         return command;
     }
-
-    void set_current_state(string str) {
-        this->current_state_ = str;
-    }
-
-    string to_string() {
-        return M;
-    }
+    void set_current_state(string str) {  this->current_state_ = str;  }
+    string to_string() {  return M;  }
 };
 
 
@@ -200,11 +184,10 @@ private:
     string current_state_;
 
 public:
-    // constructor
+    /// constructor
     ActiveState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"A>M", "A>ET", "A>ES"}),
                                                                             primary_driving_stack_publisher_(pub) {};
-
-    /// methods
+    /// execution
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", ActiveState::to_string());  // memorizing last state
 
@@ -230,19 +213,14 @@ public:
         return "#";
     }
 
+    /// other methods
     string choose_primary_driving_stack() {
         string command = "PRIMARY DRIVING STACK";
         publisher(this->primary_driving_stack_publisher_, command);
         return command;
     }
-
-    void set_current_state(string str) {
-        this->current_state_ = str;
-    }
-
-    string to_string() {
-        return A;
-    }
+    void set_current_state(string str) {  this->current_state_ = str;  }
+    string to_string() {  return A;  }
 };
 
 
@@ -264,26 +242,35 @@ private:
     std::shared_ptr<ActiveState> activeState_ = nullptr;
 
 public:
-    // constructor
+    /// constructor
     PubSubSimulatorNode() : simple_node::Node("pub_sub_simulator_node") {
 
+        // quality of service
+        rclcpp::QoS qos_profile(rclcpp::KeepLast(10));  // queue dimension
+        qos_profile.reliable();  // type of communication
+
         // publishers and subscribers
-        this->current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
-                CURRENT_STATE_TOPIC,
-                rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local(),
-                std::bind(&PubSubSimulatorNode::current_state_subscription, this, placeholders::_1)
+        /// CURRENT STATE SUBSCRIPTION
+        qos_profile.transient_local();
+        this->current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(CURRENT_STATE_TOPIC,
+            qos_profile,
+            std::bind(&PubSubSimulatorNode::current_state_subscription, this, placeholders::_1)
         );
-        this->publish_manual_command_ = this->create_publisher<std_msgs::msg::String>(
-                MANUAL_COMMAND_TOPIC,
-                rclcpp::QoS(rclcpp::KeepLast(10)).reliable()
+        /// MANUAL COMMANDS PUBLISHER
+        this->publish_manual_command_ = this->create_publisher<std_msgs::msg::String>(MANUAL_COMMAND_TOPIC,
+            qos_profile
         );
-        this->publish_primary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
-                PRIMARY_DRIVING_STACK_TOPIC,
-                rclcpp::QoS(rclcpp::KeepLast(10)).reliable().deadline(rclcpp::Duration(0.1))
-        );
+        /// SECONDARY DRIVING STACK PUBLISHER
         this->publish_secondary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
                 SECONDARY_DRIVING_STACK_TOPIC,
                 rclcpp::QoS(rclcpp::KeepLast(10)).reliable()
+        );
+        /// PRIMARY DRIVING STACK PUBLISHER
+        qos_profile.deadline(chrono::milliseconds(9));
+        //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(chrono::milliseconds(2000));
+        this->publish_primary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
+                PRIMARY_DRIVING_STACK_TOPIC,
+                qos_profile
         );
 
         // create a finite state machine
@@ -312,6 +299,7 @@ public:
         end_execution();
     }
 
+    /// other methods
     // passing SUPERVISOR NODE CURRENT STATE
     void current_state_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->idleState_->set_current_state(msg->data);

@@ -134,13 +134,15 @@ private:
     }
 
 public:
-    // constructor
+    /// constructor
     ExternalStateSelectorNode() : Node("external_state_selector_node") {
+        /// CURRENT STATE SUBSCRIPTION
         this->current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
             CURRENT_STATE_TOPIC,
             rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local(),
             std::bind(&ExternalStateSelectorNode::current_state_subscription, this, placeholders::_1)
         );
+        /// STATE SELECTION PUBLISHER
         this->publish_state_selection_ = this->create_publisher<std_msgs::msg::String>(
             STATE_SELECTION_TOPIC,
             rclcpp::QoS(rclcpp::KeepLast(10)).reliable()
