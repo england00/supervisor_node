@@ -45,11 +45,29 @@ private:
     // parameters
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_state_subscription_{};
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_state_selection_{};
-    string current_state_, state_selection_;
+    string current_state_, state_selection_, last_state_ = I;
+
+public:
+    /// constructor
+    ExternalStateSelectorNode() : Node("external_state_selector_node") {
+        /// CURRENT STATE SUBSCRIPTION
+        this->current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
+            CURRENT_STATE_TOPIC,
+            rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local(),
+            std::bind(&ExternalStateSelectorNode::current_state_subscription, this, placeholders::_1)
+        );
+        /// STATE SELECTION PUBLISHER
+        this->publish_state_selection_ = this->create_publisher<std_msgs::msg::String>(
+            STATE_SELECTION_TOPIC,
+            rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
+        );
+    }
 
     // methods
     void current_state_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->current_state_ = msg->data;
+        if (this->current_state_.empty())
+            this->current_state_ = this->last_state_;
         system("clear");
         cout << "EXTERNAL STATE SELECTOR NODE:\n" << endl;
 
@@ -59,11 +77,12 @@ private:
             do {
                 cout << "SUPERVISOR NODE --> ON\n"
                         "Current state: " << this->current_state_ <<
-                        "\n\nType the digit of the option you want to choose:" << endl;
+                     "\n\nType the digit of the option you want to choose:" << endl;
 
                 /// behaviour based on current state
                 // handling IDLE state
                 if (this->current_state_ == I) {
+                    this->last_state_ = I;  // saving last state
                     cout << "1. Pass to " + string(END) << endl;
                     cout << "2. Pass to " + string(M) << endl;
                     cin >> this->state_selection_;
@@ -73,8 +92,9 @@ private:
                     if (input_integer_checker(this->state_selection_, 1, 2))
                         check = true;
                 }
-                // handling MANUAL state
+                    // handling MANUAL state
                 else if (this->current_state_ == M) {
+                    this->last_state_ = M;  // saving last state
                     cout << "1. Pass to " + string(I) << endl;
                     cout << "2. Pass to " + string(A) << endl;
                     cin >> this->state_selection_;
@@ -84,8 +104,9 @@ private:
                     if (input_integer_checker(this->state_selection_, 1, 2))
                         check = true;
                 }
-                // handling ACTIVE state
+                    // handling ACTIVE state
                 else if (this->current_state_ == A) {
+                    this->last_state_ = A;  // saving last state
                     cout << "1. Pass to " + string(M) << endl;
                     cin >> this->state_selection_;
                     cin.ignore();  // cleaning input buffer
@@ -94,7 +115,18 @@ private:
                     if (input_integer_checker(this->state_selection_, 1, 1)) {
                         check = true;
                     }
-
+                }
+                    // handling EMERGENCY TAKEOVER state
+                else if (this->current_state_ == ET) {
+                    this->last_state_ = ET;  // saving last state
+                    cout << "1. Update current state" << endl;
+                    cin >> this->state_selection_;
+                    cin.ignore();  // cleaning input buffer
+                    system("clear");
+                    cout << "EXTERNAL STATE SELECTOR NODE:\n" << endl;
+                    if (input_integer_checker(this->state_selection_, 1, 1)) {
+                        check = true;
+                    }
                 }
             } while (!check);
 
@@ -107,7 +139,7 @@ private:
                     this->publishing(this->publish_state_selection_, M);
                 }
             }
-            // from MANUAL
+                // from MANUAL
             else if (this->current_state_ == M) {
                 if (this->state_selection_ == "1") {
                     this->publishing(this->publish_state_selection_, I);
@@ -115,10 +147,16 @@ private:
                     this->publishing(this->publish_state_selection_, A);
                 }
             }
-            // from ACTIVE
+                // from ACTIVE
             else if (this->current_state_ == A) {
                 if (this->state_selection_ == "1") {
                     this->publishing(this->publish_state_selection_, M);
+                }
+            }
+                // from EMERGENCY TAKEOVER
+            else if (this->current_state_ == ET) {
+                if (this->current_state_ == "1") {
+                    /// DO NOTHING
                 }
             }
         } else {
@@ -131,22 +169,6 @@ private:
         auto message = std_msgs::msg::String();
         message.data = msg;
         pub->publish(message);
-    }
-
-public:
-    /// constructor
-    ExternalStateSelectorNode() : Node("external_state_selector_node") {
-        /// CURRENT STATE SUBSCRIPTION
-        this->current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
-            CURRENT_STATE_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local(),
-            std::bind(&ExternalStateSelectorNode::current_state_subscription, this, placeholders::_1)
-        );
-        /// STATE SELECTION PUBLISHER
-        this->publish_state_selection_ = this->create_publisher<std_msgs::msg::String>(
-            STATE_SELECTION_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(10)).reliable()
-        );
     }
 };
 

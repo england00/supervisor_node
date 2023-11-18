@@ -19,13 +19,14 @@
 #define ET "EMERGENCY TAKEOVER"
 #define ES "EMERGENCY STOP"
 #define END "END"
-#define GENERAL_SLEEP 100
-#define FAULT_ALERT_SLEEP 1000
-#define END_SLEEP 500
+#define GENERAL_SLEEP 100  // milliseconds
+#define END_SLEEP 500  // milliseconds
+#define EMERGENCY_TIMER 50000  // seconds
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
 #define PRIMARY_DRIVING_STACK_TOPIC "supervisor_node/primary_driving_stack"
+#define SECONDARY_DRIVING_STACK_TOPIC "supervisor_node/secondary_driving_stack"
 #define COMMON_FAULT_TOPIC "supervisor_node/common_fault"
 #define SERIOUS_FAULT_TOPIC "supervisor_node/serious_fault"
 
@@ -166,6 +167,7 @@ private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr active_state_pub_{};
     string next_state_, primary_driving_stack_command_, common_fault_;
+    bool deadline_missed;
 
 public:
     /// constructor
@@ -178,6 +180,7 @@ public:
                                 "- fault checks are performed;\n"
                                 "- control is entrusted to the primary driving stack.";
         string stdout_buffer;
+        this->deadline_missed = false;
         this->common_fault_.clear();
         blackboard->set<string>("previous_state", ActiveState::to_string());  // memorizing last state
         publishing(active_state_pub_, ActiveState::to_string());
@@ -195,23 +198,26 @@ public:
             this->primary_driving_stack_command_ = "";  // cleaning latest command buffer
             this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
-            // managing common fault
-            if (!this->common_fault_.empty()) {  // adding the last command received
-                cout << timestamp(this->primary_driving_stack_command_) << endl;
-                this_thread::sleep_for(chrono::milliseconds(FAULT_ALERT_SLEEP));  // timer
-                return "A>ET";
-            }
-
             // managing transitions
             if (this->next_state_ == M) {  // checking if MANUAL state has been selected
                 return "A>M";
             }
+            if (this->deadline_missed) {  /// DEADLINE MISSED
+                return "A>ET";
+            }
+
+            /*
+            // managing common fault
+            if (!this->common_fault.empty()) {  // adding the last command received
+                return "A>ET";
+            }*/
         } while(true);
     }
 
     /// other methods
     void set_next_state(string str) {  this->next_state_ = str;  }
     void set_primary_driving_stack_command(string str) {  this->primary_driving_stack_command_ = str;  }
+    void set_deadline_missed() {  this->deadline_missed = true;  }
     void set_common_fault(string str) {  this->common_fault_ = str;  }
     string to_string() {  return A;  }
 };
@@ -222,7 +228,7 @@ class EmergencyTakeoverState : public yasmin::State {
 private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr emergency_takeover_state_pub_{};
-    string next_state_, common_fault_;
+    string next_state_, previous_state_, secondary_driving_stack_command_;
 
 public:
     /// constructor
@@ -233,20 +239,37 @@ public:
         string stdout_message = "Executing state " + EmergencyTakeoverState::to_string() + "\n\n"
                                 "The vehicle is in a state of risk:\n"
                                 "- control is entrusted to the secondary driving stack.";
+        string stdout_buffer;
+        this->previous_state_ = blackboard->get<string>("previous_state");
         blackboard->set<string>("previous_state", EmergencyTakeoverState::to_string());  // memorizing last state
-        publishing(emergency_takeover_state_pub_, EmergencyTakeoverState::to_string());
+        clock_t begin = clock();  // timer start
 
         // state cycle
         do {
+            // publishing current state in each iteration
+            publishing(emergency_takeover_state_pub_, EmergencyTakeoverState::to_string());
+
             // managing what printing on stdout
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
-            cout << stdout_message << endl;
+            cout << stdout_message << endl;  // default output
+            if (!this->secondary_driving_stack_command_.empty()) {  // adding the last command received
+                stdout_buffer = timestamp(this->secondary_driving_stack_command_);
+            }
+            cout << stdout_buffer << endl;
+            this->secondary_driving_stack_command_ = "";  // cleaning latest command buffer
             this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
+
+            // managing transition
+            if ((clock() - begin) > EMERGENCY_TIMER and this->previous_state_ == A) {  /// return to PREVIOUS STATE
+                return "ET>A";  // --> the common fault is resolved
+            }
+
         } while(true);
     }
 
     /// other methods
+    void set_secondary_driving_stack_command(string str) {  this->secondary_driving_stack_command_ = str;  }
     void set_next_state(string str) {  this->next_state_ = str;  }
     string to_string() {  return ET;  }
 };
@@ -296,16 +319,17 @@ private:
     /// CURRENT STATE PUBLISHER
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr current_state_pub_ = this->create_publisher<std_msgs::msg::String>(
         CURRENT_STATE_TOPIC,
-        rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local()
+        rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local()
     );
     /// SELECTED STATE SUBSCRIPTION
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr selected_state_sub_ = this->create_subscription<std_msgs::msg::String>(
         STATE_SELECTION_TOPIC,
-        rclcpp::QoS(rclcpp::KeepLast(10)).reliable(),
+        rclcpp::QoS(rclcpp::KeepLast(1)).reliable(),
         std::bind(&SupervisorNode::selected_state_subscription, this, placeholders::_1)
     );
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr manual_command_sub_ = nullptr;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr primary_driving_stack_sub_ = nullptr;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr secondary_driving_stack_sub_ = nullptr;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr common_fault_sub_ = nullptr;
     std::unique_ptr<yasmin_viewer::YasminViewerPub> yasmin_pub_{};
 
@@ -321,20 +345,17 @@ public:
     SupervisorNode() : simple_node::Node("supervisor_node") {
 
         // quality of service and subscription options
-        rclcpp::QoS qos_profile(rclcpp::KeepLast(10));  // queue dimension
+        rclcpp::QoS qos_profile(rclcpp::KeepLast(1));  // queue dimension
         qos_profile.reliable();  // type of communication
-        rclcpp::SubscriptionOptions subscription_options;
-        subscription_options.event_callbacks.deadline_callback = [](rclcpp::QOSDeadlineRequestedInfo &event) -> void {
-            // managing MISSED DEADLINE
-            system("clear");
-            cout << "Deadline missed - total " << event.total_count << " (delta " << event.total_count_change << ")" << endl;
-        };
-        subscription_options.event_callbacks.liveliness_callback = [](rclcpp::QOSLivelinessChangedInfo& event) -> void {
+
+        /*
+        subscription_options.event_callbacks.liveliness_callback = [this](rclcpp::QOSLivelinessChangedInfo &event) -> void {
             // managing CHANGED LIVELINESS
             system("clear");
             cout << "Liveliness changed - alive " << event.alive_count << " (delta " << event.alive_count_change << "), "
                     "not alive " << event.not_alive_count << " (delta " << event.not_alive_count_change << ")" << endl;
-        };
+        };*/
+        //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(chrono::milliseconds(2000));
 
         /// MANUAL COMMANDS SUBSCRIPTION
         this->manual_command_sub_ = this->create_subscription<std_msgs::msg::String>(MANUAL_COMMAND_TOPIC, qos_profile,
@@ -345,12 +366,22 @@ public:
             std::bind(&SupervisorNode::common_fault_subscription, this, placeholders::_1)
         );
         /// PRIMARY DRIVING STACK SUBSCRIPTION
-        qos_profile.deadline(chrono::milliseconds(9));
-        //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(chrono::milliseconds(2000));
+        qos_profile.deadline(chrono::milliseconds(120));
+        rclcpp::SubscriptionOptions subscription_options_primary_driving_stack;
+        subscription_options_primary_driving_stack.event_callbacks.deadline_callback = [this](rclcpp::QOSDeadlineRequestedInfo &event) -> void {
+            if (this->blackboard_->get<string>("previous_state") == A)  // only if SUPERVISOR NODE is in ACTIVE state
+                this->activeState_->set_deadline_missed();  // managing MISSED DEADLINE
+        };
         this->primary_driving_stack_sub_ = this->create_subscription<std_msgs::msg::String>(PRIMARY_DRIVING_STACK_TOPIC,
             qos_profile,
             std::bind(&SupervisorNode::primary_driving_stack_subscription, this, placeholders::_1),
-            subscription_options
+            subscription_options_primary_driving_stack
+        );
+        /// SECONDARY DRIVING STACK SUBSCRIPTION
+        qos_profile.deadline(chrono::milliseconds(120));
+        this->secondary_driving_stack_sub_ = this->create_subscription<std_msgs::msg::String>(SECONDARY_DRIVING_STACK_TOPIC,
+            qos_profile,
+            std::bind(&SupervisorNode::secondary_driving_stack_subscription, this, placeholders::_1)
         );
 
         // create a finite state machine
@@ -409,6 +440,10 @@ public:
     // passing PRIMARY DRIVING STACK
     void primary_driving_stack_subscription(const std_msgs::msg::String::SharedPtr msg) {
         this->activeState_->set_primary_driving_stack_command(msg->data);
+    }
+    // passing SECONDARY DRIVING STACK
+    void secondary_driving_stack_subscription(const std_msgs::msg::String::SharedPtr msg) {
+        this->emergencyTakeoverState_->set_secondary_driving_stack_command(msg->data);
     }
     // passing COMMON FAULTS
     void common_fault_subscription(const std_msgs::msg::String::SharedPtr msg) {
