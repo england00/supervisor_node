@@ -120,21 +120,25 @@ Within the repository, two additional nodes are included for working with the [S
 - [Pub/Sub Simulator Node](src/pub_sub_simulator_node.cpp), that automatically publishes and subscribes in all the available topics, simulating all the possible states and transitions in which the FSM can go through.
 
 To run the demo open three terminal window and follow these commands for each one:
+- Terminal 1:
 ```shell
 cd ~/ros2_ws
 source /opt/ros/foxy/setup.bash
 source install/local_setup.bash 
-```
-- Terminal 1:
-```shell
 ros2 run supervisor_node supervisor_node
 ```
 - Terminal 2:
 ```shell
+cd ~/ros2_ws
+source /opt/ros/foxy/setup.bash
+source install/local_setup.bash 
 ros2 run supervisor_node external_state_selector_node
 ```
 - Terminal 3:
 ```shell
+cd ~/ros2_ws
+source /opt/ros/foxy/setup.bash
+source install/local_setup.bash 
 ros2 run supervisor_node pub_sub_simulator_node
 ```
 
