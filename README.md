@@ -138,8 +138,11 @@ ros2 run supervisor_node external_state_selector_node
 ros2 run supervisor_node pub_sub_simulator_node
 ```
 
-Otherwise, a [Launch File](launch/demo.py) is provided for calling the execution of all the nodes together with just this single command: 
+Otherwise, a [Launch File](launch/demo.py) is provided for calling the execution of all the nodes together within a single terminal window: 
 ```shell
+cd ~/ros2_ws
+source /opt/ros/foxy/setup.bash
+source install/local_setup.bash 
 ros2 launch supervisor_node demo.py
 ```
 In this case is added a further node execution, provided by [YASMIN](https://github.com/uleroboticsgroup/yasmin) library. 
