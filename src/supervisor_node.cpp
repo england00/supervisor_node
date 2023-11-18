@@ -1,13 +1,9 @@
 #include <chrono>
 #include <ctime>
 #include <iostream>
-#include <memory>
 #include <string>
-#include <thread>
-#include <vector>
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
-#include "nav_msgs/msg/odometry.hpp"
 #include "simple_node/node.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin/state_machine.hpp"
@@ -100,8 +96,6 @@ public:
         } while(true);
     }
 
-    /// --> the only way to exit from IDLE STATE is selecting the next state in which going
-
     /// other methods
     void set_next_state(string str) {  this->next_state_ = str;  }
     string to_string() {  return I;  }
@@ -150,9 +144,6 @@ public:
             }
         } while(true);
     }
-
-    /// --> no functions for managing PRIMARY or SECONDARY STATE STACKS, which must be ignored
-    /// --> no functions for doing error checks
 
     /// other methods
     void set_next_state(string str) {  this->next_state_ = str;  }

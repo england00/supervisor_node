@@ -1,15 +1,10 @@
 #include <chrono>
-#include <ctime>
 #include <iostream>
-#include <memory>
 #include <string>
 #include <thread>
-#include <mutex>
-#include <vector>
 #include <random>
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
-#include "nav_msgs/msg/odometry.hpp"
 #include "simple_node/node.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin/state_machine.hpp"
@@ -73,19 +68,6 @@ string timestamp(string command) {
     return "\nSent message on " + std::string(time_buffer) + ":\n --> " + command;
 }
 
-void end_execution() {
-    system("clear");
-    cout << "PUB/SUB SIMULATOR NODE:\n\nSUPERVISOR NODE --> OFF" << endl;
-    this_thread::sleep_for(chrono::milliseconds(END_SLEEP));  // timer
-    exit(EXIT_SUCCESS);
-}
-
-void publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &msg) {
-    auto message = std_msgs::msg::String();
-    message.data = msg;
-    pub->publish(message);
-}
-
 atomic_bool stop_thread;
 void polling_publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &state, int delay) {
     auto message = std_msgs::msg::String();
@@ -112,6 +94,13 @@ void polling_publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub,
         cout << timestamp(message.data) << endl;
         this_thread::sleep_for(chrono::milliseconds(delay));  // timer
     }
+}
+
+void end_execution() {
+    system("clear");
+    cout << "PUB/SUB SIMULATOR NODE:\n\nSUPERVISOR NODE --> OFF" << endl;
+    this_thread::sleep_for(chrono::milliseconds(END_SLEEP));  // timer
+    exit(EXIT_SUCCESS);
 }
 
 
