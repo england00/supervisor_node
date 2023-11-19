@@ -29,7 +29,7 @@
 #define PRIMARY_DRIVING_STACK_TOPIC "supervisor_node/primary_driving_stack"
 #define SECONDARY_DRIVING_STACK_TOPIC "supervisor_node/secondary_driving_stack"
 #define COMMON_FAULT_TOPIC "supervisor_node/common_fault"
-#define SERIOUS_FAULT_TOPIC "supervisor_node/serious_fault"
+#define GENERAL_DRIVER_TOPIC "supervisor_node/general_sensor_or_actuator_driver_response"
 
 using namespace std;
 
@@ -281,6 +281,7 @@ public:
     string to_string() {  return A;  }
 };
 
+
 /********************************************* Emergency Takeover State ***********************************************/
 class EmergencyTakeoverState : public yasmin::State {
 private:
@@ -333,6 +334,32 @@ public:
 };
 
 
+/*********************************************** Emergency Stop State *************************************************/
+class EmergencyStopState : public yasmin::State {
+private:
+    // parameters
+    string selected_state_, current_state_;
+
+public:
+    /// constructor
+    EmergencyStopState() : yasmin::State({"ES>M", "ES>ET"}) {};
+    /// methods
+    string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+        blackboard->set<string>("previous_state", EmergencyStopState::to_string());  // memorizing last state
+
+        // state cycle
+        do {
+
+        } while(true);
+    }
+
+    /// other methods
+    void set_selected_state(string str) {  this->selected_state_ = str;  }
+    void set_current_state(string str) {  this->current_state_ = str;  }
+    string to_string() {  return ES;  }
+};
+
+
 /********************************************** Pub/Sub Simulator Node ************************************************/
 class PubSubSimulatorNode : public simple_node::Node {
 private:
@@ -352,6 +379,7 @@ private:
     std::shared_ptr<ManualState> manualState_ = nullptr;
     std::shared_ptr<ActiveState> activeState_ = nullptr;
     std::shared_ptr<EmergencyTakeoverState> emergencyTakeoverState_ = nullptr;
+    std::shared_ptr<EmergencyStopState> emergencyStopState_ = nullptr;
 
 public:
     /// constructor
@@ -400,6 +428,7 @@ public:
         this->manualState_ = std::make_shared<ManualState>(this->publish_manual_command_);
         this->activeState_ = std::make_shared<ActiveState>(this->publish_primary_driving_stack_command_, this->publish_common_fault_);
         this->emergencyTakeoverState_ = std::make_shared<EmergencyTakeoverState>(this->publish_secondary_driving_stack_command_);
+        this->emergencyStopState_ = std::make_shared<EmergencyStopState>();
         auto fsm = std::make_shared<yasmin::StateMachine>(yasmin::StateMachine({END}));
 
         // add states
@@ -409,15 +438,22 @@ public:
         });
         fsm->add_state(this->manualState_->to_string(), this->manualState_, {
                 {"M>I", this->idleState_->to_string()},
-                {"M>A", this->activeState_->to_string()}
+                {"M>A", this->activeState_->to_string()},
+                {"M>ES", this->emergencyStopState_->to_string()}
         });
         fsm->add_state(this->activeState_->to_string(), this->activeState_, {
                 {"A>M", this->manualState_->to_string()},
-                {"A>ET", this->emergencyTakeoverState_->to_string()}
+                {"A>ET", this->emergencyTakeoverState_->to_string()},
+                {"A>ES", this->emergencyStopState_->to_string()}
         });
         fsm->add_state(this->emergencyTakeoverState_->to_string(), this->emergencyTakeoverState_, {
                 {"ET>M", this->manualState_->to_string()},
-                {"ET>A", this->activeState_->to_string()}
+                {"ET>A", this->activeState_->to_string()},
+                {"ET>ES", this->emergencyStopState_->to_string()}
+        });
+        fsm->add_state(this->emergencyStopState_->to_string(), this->emergencyStopState_, {
+                {"ES>M", this->manualState_->to_string()},
+                {"ES>ET", this->emergencyTakeoverState_->to_string()}
         });
 
         // executing fsm
@@ -434,6 +470,7 @@ public:
         this->manualState_->set_selected_state(msg->data);
         this->activeState_->set_selected_state(msg->data);
         this->emergencyTakeoverState_->set_selected_state(msg->data);
+        this->emergencyStopState_->set_selected_state(msg->data);
     }
     // passing SUPERVISOR NODE CURRENT STATE
     void current_state_subscription(const std_msgs::msg::String::SharedPtr msg) {
@@ -441,6 +478,7 @@ public:
         this->manualState_->set_current_state(msg->data);
         this->activeState_->set_current_state(msg->data);
         this->emergencyTakeoverState_->set_current_state(msg->data);
+        this->emergencyStopState_->set_current_state(msg->data);
     }
 };
 

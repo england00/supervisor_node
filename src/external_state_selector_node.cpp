@@ -278,6 +278,33 @@ public:
 };
 
 
+/*********************************************** Emergency Stop State *************************************************/
+class EmergencyStopState : public yasmin::State {
+private:
+    // parameters
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr emergency_stop_state_pub_{};
+    string selected_state_, current_state_;
+
+public:
+    /// constructor
+    EmergencyStopState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"ES>M", "ES>ET"}),
+                                                                                   emergency_stop_state_pub_(pub) {};
+    /// methods
+    string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+        blackboard->set<string>("previous_state", EmergencyStopState::to_string());  // memorizing last state
+
+        // state cycle
+        do {
+
+        } while(true);
+    }
+
+    /// other methods
+    void set_current_state(string str) {  this->current_state_ = str;  }
+    string to_string() {  return ES;  }
+};
+
+
 /******************************************** External State Selector Node ********************************************/
 class ExternalStateSelectorNode : public simple_node::Node {
 private:
@@ -302,6 +329,7 @@ private:
     std::shared_ptr<ManualState> manualState_ = std::make_shared<ManualState>(this->publish_state_selection_);
     std::shared_ptr<ActiveState> activeState_ = std::make_shared<ActiveState>(this->publish_state_selection_);
     std::shared_ptr<EmergencyTakeoverState> emergencyTakeoverState_ = std::make_shared<EmergencyTakeoverState>(this->publish_state_selection_);
+    std::shared_ptr<EmergencyStopState> emergencyStopState_ = std::make_shared<EmergencyStopState>(this->publish_state_selection_);
 
 public:
     /// constructor
@@ -317,15 +345,22 @@ public:
         });
         fsm->add_state(this->manualState_->to_string(), this->manualState_, {
                 {"M>I", this->idleState_->to_string()},
-                {"M>A", this->activeState_->to_string()}
+                {"M>A", this->activeState_->to_string()},
+                {"M>ES", this->emergencyStopState_->to_string()}
         });
         fsm->add_state(this->activeState_->to_string(), this->activeState_, {
                 {"A>M", this->manualState_->to_string()},
-                {"A>ET", this->emergencyTakeoverState_->to_string()}
+                {"A>ET", this->emergencyTakeoverState_->to_string()},
+                {"A>ES", this->emergencyStopState_->to_string()}
         });
         fsm->add_state(this->emergencyTakeoverState_->to_string(), this->emergencyTakeoverState_, {
                 {"ET>M", this->manualState_->to_string()},
-                {"ET>A", this->activeState_->to_string()}
+                {"ET>A", this->activeState_->to_string()},
+                {"ET>ES", this->emergencyStopState_->to_string()}
+        });
+        fsm->add_state(this->emergencyStopState_->to_string(), this->emergencyStopState_, {
+                {"ES>M", this->manualState_->to_string()},
+                {"ES>ET", this->emergencyTakeoverState_->to_string()}
         });
 
         // executing fsm
@@ -342,6 +377,7 @@ public:
         this->manualState_->set_current_state(msg->data);
         this->activeState_->set_current_state(msg->data);
         this->emergencyTakeoverState_->set_current_state(msg->data);
+        this->emergencyStopState_->set_current_state(msg->data);
     }
 };
 
