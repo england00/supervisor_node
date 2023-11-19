@@ -18,9 +18,11 @@
 #define END "END"
 #define GENERAL_SLEEP 100  // milliseconds
 #define MANUAL_COMMAND_PUBLISHER_SLEEP 1000  // milliseconds
+#define ACTIVE_SLEEP 10 // milliseconds
 #define PRIMARY_DRIVING_STACK_PUBLISHER_SLEEP 100  // milliseconds
 #define SECONDARY_DRIVING_STACK_PUBLISHER_SLEEP 100  // milliseconds
 #define END_SLEEP 500  // milliseconds
+#define DEADLINE 200  // milliseconds
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
@@ -50,6 +52,15 @@ string choose_manual_commands() {
     return command;
 }
 
+string choose_common_fault() {
+    int choise = generateRandomInt(1, 100);
+    string command;
+    if (choise == 1) {  command = "ADHESION LOSS";  }
+    else if (choise == 5) {  command = "CERTAIN COLLISION SEQUENCE";  }
+    else {  command = "";  }
+    return command;
+}
+
 string timestamp(string command) {
     // date and time
     char time_buffer[50];  // buffer for date and current time
@@ -69,7 +80,7 @@ string timestamp(string command) {
 }
 
 atomic_bool stop_thread;
-void polling_publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &state, int delay) {
+void polling_publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const std::string &state, int delay, int thread_number=0) {
     auto message = std_msgs::msg::String();
     string commands;
     stop_thread = false;
@@ -78,20 +89,30 @@ void polling_publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub,
         if (state == M) {  // MANUAL STATE
             message.data = choose_manual_commands();
             commands = "MANUAL COMMANDS";
-        } else if (state == A) {
-            message.data = "PRIMARY DRIVING STACK";
-            commands = "PRIMARY DRIVING STACK";
-        } else if (state == ET) {
+        } else if (state == A) {  // ACTIVE STATE
+            if (thread_number == 0) {
+                message.data = "PRIMARY DRIVING STACK";
+                commands = "PRIMARY DRIVING STACK";
+            } else {
+                message.data = choose_common_fault();
+                commands = "COMMON FAULT";
+            }
+        } else if (state == ET) {  // EMERGENCY TAKEOVER STATE
             message.data = "SECONDARY DRIVING STACK";
             commands = "SECONDARY DRIVING STACK";
         }
-        system("clear");
-        cout << "PUB/SUB SIMULATOR NODE:\n\n"
-                "SUPERVISOR NODE --> ON\n"
-                "Current state: " <<
+        if (thread_number == 0) {
+            system("clear");
+            cout << "PUB/SUB SIMULATOR NODE:\n\n"
+                    "SUPERVISOR NODE --> ON\n"
+                    "Current state: " <<
                  state << "\n\nPublishing " << commands << ":" << endl;
-        pub->publish(message);  // publishing
-        cout << timestamp(message.data) << endl;
+        }
+        if (message.data != "") {
+            pub->publish(message);  // publishing
+            if (thread_number == 0)
+                cout << timestamp(message.data) << endl;
+        }
         this_thread::sleep_for(chrono::milliseconds(delay));  // timer
     }
 }
@@ -126,7 +147,7 @@ public:
                 cout << "PUB/SUB SIMULATOR NODE:\n\n"
                         "SUPERVISOR NODE --> ON\n"
                         "Current state: " <<
-                     this->current_state_ << "\n\n\"The node is on and awaits signals from the outside." << endl;
+                        this->current_state_ << "\n\n\"The node is on and awaits signals from the outside." << endl;
             }
             this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
@@ -207,34 +228,40 @@ class ActiveState : public yasmin::State {
 private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr primary_driving_stack_publisher_{};
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr common_fault_publisher_{};
     string selected_state_, current_state_;
-    thread primary_driving_stack_thread_;
+    thread primary_driving_stack_thread_, common_fault_thread_;
 
 public:
     /// constructor
-    ActiveState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"A>M", "A>ET", "A>ES"}),
-                                                                            primary_driving_stack_publisher_(pub) {};
+    ActiveState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub1,
+                rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub2) : yasmin::State({"A>M", "A>ET", "A>ES"}),
+                                                                            primary_driving_stack_publisher_(pub1),
+                                                                            common_fault_publisher_(pub2) {};
     /// execution
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", ActiveState::to_string());  // memorizing last state
 
-        // starting publisher thread
+        // starting publishers thread
         this->primary_driving_stack_thread_ = thread([this]() {  // opening new simulation thread
             polling_publisher(this->primary_driving_stack_publisher_, ActiveState::to_string(), PRIMARY_DRIVING_STACK_PUBLISHER_SLEEP);
+        });
+        this->common_fault_thread_ = thread([this]() {  // opening new simulation thread
+            polling_publisher(this->common_fault_publisher_, ActiveState::to_string(), PRIMARY_DRIVING_STACK_PUBLISHER_SLEEP, 1);
         });
 
         // state cycle
         do {
             // timer
-            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));
+            this_thread::sleep_for(chrono::milliseconds(ACTIVE_SLEEP));
 
             // managing transitions
-            if (this->selected_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
-                this->exit_publisher_thread();
-                return "A>M";
-            } else if (this->current_state_ == ET) {  // checking if SUPERVISOR NODE has switched to EMERGENCY TAKEOVER state
+            if (this->current_state_ == ET) {  // checking if SUPERVISOR NODE has switched to EMERGENCY TAKEOVER state
                 this->exit_publisher_thread();
                 return "A>ET";
+            } else if (this->selected_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
+                this->exit_publisher_thread();
+                return "A>M";
             }
         } while(this->current_state_ != END);
 
@@ -247,6 +274,7 @@ public:
     void exit_publisher_thread() {
         stop_thread = true;
         this->primary_driving_stack_thread_.join();
+        this->common_fault_thread_.join();
     }
     void set_selected_state(string str) {  this->selected_state_ = str;  }
     void set_current_state(string str) {  this->current_state_ = str;  }
@@ -277,12 +305,15 @@ public:
         // state cycle
         do {
             // timer
-            this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));
+            this_thread::sleep_for(chrono::milliseconds(ACTIVE_SLEEP));
 
             // managing transitions
             if (this->current_state_ == A) {  // checking if SUPERVISOR NODE has switched to ACTIVE state
                 this->exit_publisher_thread();
                 return "ET>A";
+            } else if (this->selected_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
+                this->exit_publisher_thread();
+                return "ET>M";
             }
         } while(this->current_state_ != END);
 
@@ -312,6 +343,7 @@ private:
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr selected_state_sub_ = nullptr;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_state_subscription_ = nullptr;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_manual_command_ = nullptr;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_common_fault_ = nullptr;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_primary_driving_stack_command_ = nullptr;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_secondary_driving_stack_command_ = nullptr;
 
@@ -345,15 +377,19 @@ public:
         this->publish_manual_command_ = this->create_publisher<std_msgs::msg::String>(MANUAL_COMMAND_TOPIC,
             qos_profile
         );
+        /// COMMON FAULTS PUBLISHER
+        this->publish_common_fault_ = this->create_publisher<std_msgs::msg::String>(COMMON_FAULT_TOPIC,
+            qos_profile
+        );
         /// PRIMARY DRIVING STACK PUBLISHER
-        qos_profile.deadline(chrono::milliseconds(120));
+        qos_profile.deadline(chrono::milliseconds(DEADLINE));
         //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(chrono::milliseconds(2000));
         this->publish_primary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
                 PRIMARY_DRIVING_STACK_TOPIC,
                 qos_profile
         );
         /// SECONDARY DRIVING STACK PUBLISHER
-        qos_profile.deadline(chrono::milliseconds(120));
+        qos_profile.deadline(chrono::milliseconds(DEADLINE));
         this->publish_secondary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
                 SECONDARY_DRIVING_STACK_TOPIC,
                 qos_profile
@@ -362,7 +398,7 @@ public:
         // create a finite state machine
         this->idleState_ = std::make_shared<IdleState>();
         this->manualState_ = std::make_shared<ManualState>(this->publish_manual_command_);
-        this->activeState_ = std::make_shared<ActiveState>(this->publish_primary_driving_stack_command_);
+        this->activeState_ = std::make_shared<ActiveState>(this->publish_primary_driving_stack_command_, this->publish_common_fault_);
         this->emergencyTakeoverState_ = std::make_shared<EmergencyTakeoverState>(this->publish_secondary_driving_stack_command_);
         auto fsm = std::make_shared<yasmin::StateMachine>(yasmin::StateMachine({END}));
 

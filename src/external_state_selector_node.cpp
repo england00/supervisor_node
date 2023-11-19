@@ -77,7 +77,7 @@ public:
                 // managing what printing on stdout
                 system("clear");
                 cout << "EXTERNAL STATE SELECTOR NODE:\n\nSUPERVISOR NODE --> ON\nCurrent state: " << IdleState::to_string() << endl;
-                cout << "NOTE: if this 'Current state' is not equal to SUPERVISOR NODE's Current state, type one of the following options to reload."
+                cout << "\nNOTE: if this 'Current state' is not equal to SUPERVISOR NODE's Current state, type one of the following options to reload."
                         "\n\nType the digit of the option you want to choose:" << endl;
                 cout << "1. Pass to " + string(END) << endl;
                 cout << "2. Pass to " + string(M) << endl;
@@ -130,7 +130,7 @@ public:
             // managing what printing on stdout
             system("clear");
             cout << "EXTERNAL STATE SELECTOR NODE:\n\nSUPERVISOR NODE --> ON\nCurrent state: " << ManualState::to_string() << endl;
-            cout << "NOTE: if this 'Current state' is not equal to SUPERVISOR NODE's Current state, type one of the following options to reload."
+            cout << "\nNOTE: if this 'Current state' is not equal to SUPERVISOR NODE's Current state, type one of the following options to reload."
                     "\n\nType the digit of the option you want to choose:" << endl;
             cout << "1. Pass to " + string(I) << endl;
             cout << "2. Pass to " + string(A) << endl;
@@ -182,7 +182,7 @@ public:
             // managing what printing on stdout
             system("clear");
             cout << "EXTERNAL STATE SELECTOR NODE:\n\nSUPERVISOR NODE --> ON\nCurrent state: " << ActiveState::to_string() << endl;
-            cout << "NOTE: if this 'Current state' is not equal to SUPERVISOR NODE's Current state, type one of the following options to reload."
+            cout << "\nNOTE: if this 'Current state' is not equal to SUPERVISOR NODE's Current state, type one of the following options to reload."
                     "\n\nType the digit of the option you want to choose:" << endl;
             cout << "1. Pass to " + string(M) << endl;
             cin >> this->state_selection_;  // expecting keyboard input
@@ -241,7 +241,7 @@ public:
             // managing what printing on stdout
             system("clear");
             cout << "EXTERNAL STATE SELECTOR NODE:\n\nSUPERVISOR NODE --> ON\nCurrent state: " << EmergencyTakeoverState::to_string() << endl;
-            cout << "NOTE: if this 'Current state' is not equal to SUPERVISOR NODE's Current state, type one of the following options to reload."
+            cout << "\nNOTE: if this 'Current state' is not equal to SUPERVISOR NODE's Current state, type one of the following options to reload."
                     "\n\nType the digit of the option you want to choose:" << endl;
             cout << "1. Pass to " + string(M) << endl;
             cin >> this->state_selection_;  // expecting keyboard input
