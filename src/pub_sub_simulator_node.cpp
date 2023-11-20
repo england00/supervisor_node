@@ -22,7 +22,8 @@
 #define PRIMARY_DRIVING_STACK_PUBLISHER_SLEEP 100  // milliseconds
 #define SECONDARY_DRIVING_STACK_PUBLISHER_SLEEP 100  // milliseconds
 #define END_SLEEP 500  // milliseconds
-#define DEADLINE 200  // milliseconds
+#define DEADLINE_PRIMARY_STACK 200  // milliseconds
+#define DEADLINE_SECONDARY_STACK 300  // milliseconds
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
@@ -106,7 +107,7 @@ void polling_publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub,
             cout << "PUB/SUB SIMULATOR NODE:\n\n"
                     "SUPERVISOR NODE --> ON\n"
                     "Current state: " <<
-                 state << "\n\nPublishing " << commands << ":" << endl;
+                    state << "\n\nPublishing " << commands << ":" << endl;
         }
         if (message.data != "") {
             pub->publish(message);  // publishing
@@ -312,6 +313,10 @@ public:
             if (this->current_state_ == A) {  // checking if SUPERVISOR NODE has switched to ACTIVE state
                 this->exit_publisher_thread();
                 return "ET>A";
+            } else if (this->current_state_ == ES) {  // checking if SUPERVISOR NODE has switched to EMERGENCY STOP state
+                cout << "ciao" << endl;
+                this->exit_publisher_thread();
+                return "ET>ES";
             } else if (this->selected_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
                 this->exit_publisher_thread();
                 return "ET>M";
@@ -343,14 +348,32 @@ private:
 public:
     /// constructor
     EmergencyStopState() : yasmin::State({"ES>M", "ES>ET"}) {};
+
     /// methods
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", EmergencyStopState::to_string());  // memorizing last state
 
         // state cycle
         do {
+            // managing what printing on stdout
+            system("clear");
+            cout << "PUB/SUB SIMULATOR NODE:\n\n"
+                    "SUPERVISOR NODE --> ON\n"
+                    "Current state: " <<
+                    this->current_state_ << "\n\nNo publishing." << endl;
+            this_thread::sleep_for(chrono::milliseconds(ACTIVE_SLEEP));  // timer
 
-        } while(true);
+            // managing transitions
+            if (this->current_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
+                return "ES>M";
+            } else if (this->current_state_ == ET) {  // checking if SUPERVISOR NODE has switched to EMERGENCY TAKEOVER state
+                return "ES>ET";
+            }
+        } while(this->current_state_ != END);
+
+        // emergency exit
+        end_execution();
+        return "#";
     }
 
     /// other methods
@@ -385,12 +408,10 @@ public:
     /// constructor
     PubSubSimulatorNode() : simple_node::Node("pub_sub_simulator_node") {
 
-        // quality of service
-        rclcpp::QoS qos_profile(rclcpp::KeepLast(1));  // queue dimension
-        qos_profile.reliable();  // type of communication
-
         // publishers and subscribers
         /// SELECTED STATE SUBSCRIPTION
+        rclcpp::QoS qos_profile(rclcpp::KeepLast(1));  // queue dimension
+        qos_profile.reliable();  // type of communication
         this->selected_state_sub_ = this->create_subscription<std_msgs::msg::String>(STATE_SELECTION_TOPIC,
             qos_profile,
             std::bind(&PubSubSimulatorNode::selected_state_subscription, this, placeholders::_1)
@@ -410,14 +431,13 @@ public:
             qos_profile
         );
         /// PRIMARY DRIVING STACK PUBLISHER
-        qos_profile.deadline(chrono::milliseconds(DEADLINE));
-        //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(chrono::milliseconds(2000));
+        qos_profile.deadline(chrono::milliseconds(DEADLINE_PRIMARY_STACK));
         this->publish_primary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
                 PRIMARY_DRIVING_STACK_TOPIC,
                 qos_profile
         );
         /// SECONDARY DRIVING STACK PUBLISHER
-        qos_profile.deadline(chrono::milliseconds(DEADLINE));
+        qos_profile.deadline(chrono::milliseconds(DEADLINE_SECONDARY_STACK));
         this->publish_secondary_driving_stack_command_ = this->create_publisher<std_msgs::msg::String>(
                 SECONDARY_DRIVING_STACK_TOPIC,
                 qos_profile

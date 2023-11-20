@@ -18,7 +18,8 @@
 #define GENERAL_SLEEP 100  // milliseconds
 #define END_SLEEP 500  // milliseconds
 #define EMERGENCY_TIMER 50000
-#define DEADLINE 200  // milliseconds
+#define DEADLINE_PRIMARY_STACK 200  // milliseconds
+#define DEADLINE_SECONDARY_STACK 300  // milliseconds
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
@@ -37,7 +38,7 @@ void publishing(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub, const 
     pub->publish(message);
 }
 
-string timestamp(string command, bool emergency = false) {
+string timestamp(string command, int print_type = 0) {
     // date and time
     char time_buffer[50];  // buffer for date and current time
     auto now = chrono::system_clock::now();  // current date
@@ -52,10 +53,14 @@ string timestamp(string command, bool emergency = false) {
     // concatenate the two buffers
     strcat(time_buffer, millis_buffer);
 
-    if (emergency) {
+    if (print_type == 0) {
+        return "\nReceived message on " + std::string(time_buffer) + ":\n --> " + command;
+    } else if (print_type == 1) {
         return "\nEmergency on " + std::string(time_buffer) + ":\n --> " + command;
+    } else if (print_type == 2) {
+        return "\nResolving " + command + " on " + std::string(time_buffer);
     }
-    return "\nReceived message on " + std::string(time_buffer) + ":\n --> " + command;
+
 }
 
 void end_execution(string outcome) {
@@ -180,7 +185,8 @@ public:
         string stdout_buffer;
         this->deadline_missed = false;
         this->common_fault_.clear();
-        this_thread::sleep_for(chrono::milliseconds(END_SLEEP));  // timer
+        if (blackboard->get<string>("previous_state") == ET)  // optional timer
+            this_thread::sleep_for(chrono::milliseconds(END_SLEEP));
         blackboard->set<string>("previous_state", ActiveState::to_string());  // memorizing last state
         publishing(active_state_pub_, ActiveState::to_string());
 
@@ -198,16 +204,16 @@ public:
             this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
             // managing transitions
-            if (this->next_state_ == M) {  // checking if MANUAL state has been selected
-                return "A>M";
-            }
             if (this->deadline_missed) {  /// DEADLINE MISSED
-                blackboard->set<string>("error_cause", timestamp("DEADLINE MISSED", true));
+                blackboard->set<string>("error_cause", timestamp("DEADLINE MISSED", 1));
                 return "A>ET";
             }
             if (!this->common_fault_.empty()) {  /// COMMON FAULT
-                blackboard->set<string>("error_cause", timestamp(this->common_fault_, true));
+                blackboard->set<string>("error_cause", timestamp(this->common_fault_, 1));
                 return "A>ET";
+            }
+            if (this->next_state_ == M) {  // checking if MANUAL state has been selected
+                return "A>M";
             }
         } while(true);
     }
@@ -226,7 +232,8 @@ class EmergencyTakeoverState : public yasmin::State {
 private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr emergency_takeover_state_pub_{};
-    string next_state_, previous_state_, secondary_driving_stack_command_;
+    string next_state_, secondary_driving_stack_command_;
+    bool deadline_missed;
 
 public:
     /// constructor
@@ -238,7 +245,9 @@ public:
                                 "The vehicle is in a state of risk:\n"
                                 "- control is entrusted to the secondary driving stack.";
         string stdout_buffer;
-        this->previous_state_ = blackboard->get<string>("previous_state");
+        this->deadline_missed = false;
+        if (blackboard->get<string>("previous_state") == ES)  // optional timer
+            this_thread::sleep_for(chrono::milliseconds(END_SLEEP));
         blackboard->set<string>("previous_state", EmergencyTakeoverState::to_string());  // memorizing last state
         clock_t begin = clock();  // timer start
 
@@ -252,26 +261,32 @@ public:
             cout << "SUPERVISION NODE:\n" << endl;
             cout << stdout_message << endl;  // default output
             cout << blackboard->get<string>("error_cause") << endl;  // emergency type
+            stdout_buffer = timestamp("COMMON FAULT", 2);
             if (!this->secondary_driving_stack_command_.empty()) {  // adding the last command received
-                stdout_buffer = timestamp(this->secondary_driving_stack_command_);
+                stdout_buffer += "\n" + timestamp(this->secondary_driving_stack_command_);
             }
             cout << stdout_buffer << endl;
             this->secondary_driving_stack_command_ = "";  // cleaning latest command buffer
             this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
 
             // managing transition
-            if ((clock() - begin) > EMERGENCY_TIMER and this->previous_state_ == A) {  /// return to PREVIOUS STATE
-                return "ET>A";  // --> the common fault is resolved
+            if (this->deadline_missed) {  /// DEADLINE MISSED
+                blackboard->set<string>("error_cause", timestamp("DEADLINE MISSED", 1));
+                return "ET>ES";
             }
             if (this->next_state_ == M) {  // checking if MANUAL state has been selected
                 return "ET>M";
+            }
+            if ((clock() - begin) > EMERGENCY_TIMER) {  /// return to PREVIOUS STATE
+                return "ET>A";  // --> the common fault is resolved
             }
         } while(true);
     }
 
     /// other methods
-    void set_secondary_driving_stack_command(string str) {  this->secondary_driving_stack_command_ = str;  }
     void set_next_state(string str) {  this->next_state_ = str;  }
+    void set_secondary_driving_stack_command(string str) {  this->secondary_driving_stack_command_ = str;  }
+    void set_deadline_missed() {  this->deadline_missed = true;  }
     string to_string() {  return ET;  }
 };
 
@@ -292,17 +307,31 @@ public:
         string stdout_message = "Executing state " + EmergencyStopState::to_string() + "\n\n"
                                 "The vehicle is unable to move autonomously:\n"
                                 "- driving commands are ignored and the vehicle is brought to a stop.";
+        string stdout_buffer;
         this->previous_state_ = blackboard->get<string>("previous_state");
         blackboard->set<string>("previous_state", EmergencyStopState::to_string());  // memorizing last state
-        publishing(emergency_stop_state_pub_, EmergencyStopState::to_string());
+        clock_t begin = clock();  // timer start
 
         // state cycle
         do {
+            // publishing current state in each iteration
+            publishing(emergency_stop_state_pub_, EmergencyStopState::to_string());
+
             // managing what printing on stdout
             system("clear");
             cout << "SUPERVISION NODE:\n" << endl;
-            cout << stdout_message << endl;
+            cout << stdout_message << endl;  // default output
+            cout << blackboard->get<string>("error_cause") << endl;  // emergency type
+            stdout_buffer = timestamp("SERIOUS FAULT", 2);
+            cout << stdout_buffer << endl;
             this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));  // timer
+
+            // managing transition
+            if ((clock() - begin) > EMERGENCY_TIMER and this->previous_state_ == M) {   /// return to PREVIOUS STATE
+                return "ES>M";  // --> the serious fault is resolved
+            } else if ((clock() - begin) > EMERGENCY_TIMER and (this->previous_state_ == A || this->previous_state_ == ET)) {  /// return to PREVIOUS STATE
+                return "ES>ET";  // --> the serious fault is resolved
+            }
         } while(true);
     }
 
@@ -333,6 +362,7 @@ private:
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr common_fault_sub_ = nullptr;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr primary_driving_stack_sub_ = nullptr;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr secondary_driving_stack_sub_ = nullptr;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr general_driver_response_sub_ = nullptr;
     std::unique_ptr<yasmin_viewer::YasminViewerPub> yasmin_pub_{};
 
     // states
@@ -346,20 +376,9 @@ public:
     /// constructor
     SupervisorNode() : simple_node::Node("supervisor_node") {
 
-        // quality of service and subscription options
+        /// MANUAL COMMANDS SUBSCRIPTION
         rclcpp::QoS qos_profile(rclcpp::KeepLast(1));  // queue dimension
         qos_profile.reliable();  // type of communication
-
-        /*
-        subscription_options.event_callbacks.liveliness_callback = [this](rclcpp::QOSLivelinessChangedInfo &event) -> void {
-            // managing CHANGED LIVELINESS
-            system("clear");
-            cout << "Liveliness changed - alive " << event.alive_count << " (delta " << event.alive_count_change << "), "
-                    "not alive " << event.not_alive_count << " (delta " << event.not_alive_count_change << ")" << endl;
-        };*/
-        //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(chrono::milliseconds(2000));
-
-        /// MANUAL COMMANDS SUBSCRIPTION
         this->manual_command_sub_ = this->create_subscription<std_msgs::msg::String>(MANUAL_COMMAND_TOPIC, qos_profile,
             std::bind(&SupervisorNode::manual_command_subscription, this, placeholders::_1)
         );
@@ -368,7 +387,7 @@ public:
             std::bind(&SupervisorNode::common_fault_subscription, this, placeholders::_1)
         );
         /// PRIMARY DRIVING STACK SUBSCRIPTION
-        qos_profile.deadline(chrono::milliseconds(DEADLINE));
+        qos_profile.deadline(chrono::milliseconds(DEADLINE_PRIMARY_STACK));  // imposing deadline
         rclcpp::SubscriptionOptions subscription_options_primary_driving_stack;
         subscription_options_primary_driving_stack.event_callbacks.deadline_callback = [this](rclcpp::QOSDeadlineRequestedInfo &event) -> void {
             if (this->blackboard_->get<string>("previous_state") == A)  // only if SUPERVISOR NODE is in ACTIVE state
@@ -380,11 +399,26 @@ public:
             subscription_options_primary_driving_stack
         );
         /// SECONDARY DRIVING STACK SUBSCRIPTION
-        qos_profile.deadline(chrono::milliseconds(DEADLINE));
+        qos_profile.deadline(chrono::milliseconds(DEADLINE_SECONDARY_STACK));
+        rclcpp::SubscriptionOptions subscription_options_secondary_driving_stack;
+        subscription_options_secondary_driving_stack.event_callbacks.deadline_callback = [this](rclcpp::QOSDeadlineRequestedInfo &event) -> void {
+            if (this->blackboard_->get<string>("previous_state") == ET)  // only if SUPERVISOR NODE is in EMERGENCY TAKEOVER state
+                this->emergencyTakeoverState_->set_deadline_missed();  // managing MISSED DEADLINE
+        };
         this->secondary_driving_stack_sub_ = this->create_subscription<std_msgs::msg::String>(SECONDARY_DRIVING_STACK_TOPIC,
             qos_profile,
-            std::bind(&SupervisorNode::secondary_driving_stack_subscription, this, placeholders::_1)
+            std::bind(&SupervisorNode::secondary_driving_stack_subscription, this, placeholders::_1),
+            subscription_options_secondary_driving_stack
         );
+
+        /*
+        subscription_options.event_callbacks.liveliness_callback = [this](rclcpp::QOSLivelinessChangedInfo &event) -> void {
+            // managing CHANGED LIVELINESS
+            system("clear");
+            cout << "Liveliness changed - alive " << event.alive_count << " (delta " << event.alive_count_change << "), "
+                    "not alive " << event.not_alive_count << " (delta " << event.not_alive_count_change << ")" << endl;
+        };*/
+        //qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(chrono::milliseconds(2000));
 
         // create a finite state machine
         auto fsm = std::make_shared<yasmin::StateMachine>(yasmin::StateMachine({END}));

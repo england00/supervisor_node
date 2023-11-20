@@ -253,6 +253,8 @@ public:
                 this_thread::sleep_for(chrono::milliseconds(UPDATE_CURRENT_STATE_SLEEP));
                 if (this->current_state_ == A) {
                     return "ET>A";
+                } else if (this->current_state_ == ES) {
+                    return "ET>ES";  // --> the serious fault is resolved
                 }
             }
 
@@ -282,20 +284,32 @@ public:
 class EmergencyStopState : public yasmin::State {
 private:
     // parameters
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr emergency_stop_state_pub_{};
-    string selected_state_, current_state_;
+    string current_state_;
 
 public:
     /// constructor
-    EmergencyStopState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"ES>M", "ES>ET"}),
-                                                                                   emergency_stop_state_pub_(pub) {};
+    EmergencyStopState() : yasmin::State({"ES>M", "ES>ET"}) {};
+
     /// methods
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", EmergencyStopState::to_string());  // memorizing last state
 
         // state cycle
         do {
+            // managing what printing on stdout
+            system("clear");
+            cout << "EXTERNAL STATE SELECTOR NODE:\n\nSUPERVISOR NODE --> ON\nCurrent state: " << EmergencyStopState::to_string() << endl;
+            cout << "\nNecessary waiting until the serious fault is resolved." << endl;
 
+            // checking if current state is changed
+            if (this->current_state_ == M) {
+                return "ES>M";  // --> the serious fault is resolved
+            } else if (this->current_state_ == ET) {
+                return "ES>ET";  // --> the serious fault is resolved
+            }
+
+            // expecting to receive last current state
+            this_thread::sleep_for(chrono::milliseconds(UPDATE_CURRENT_STATE_SLEEP));  // timer
         } while(true);
     }
 
@@ -329,7 +343,7 @@ private:
     std::shared_ptr<ManualState> manualState_ = std::make_shared<ManualState>(this->publish_state_selection_);
     std::shared_ptr<ActiveState> activeState_ = std::make_shared<ActiveState>(this->publish_state_selection_);
     std::shared_ptr<EmergencyTakeoverState> emergencyTakeoverState_ = std::make_shared<EmergencyTakeoverState>(this->publish_state_selection_);
-    std::shared_ptr<EmergencyStopState> emergencyStopState_ = std::make_shared<EmergencyStopState>(this->publish_state_selection_);
+    std::shared_ptr<EmergencyStopState> emergencyStopState_ = std::make_shared<EmergencyStopState>();
 
 public:
     /// constructor
