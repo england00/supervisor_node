@@ -41,8 +41,15 @@ set(DEPENDENCIES
 )
 
 # supervisor node
-add_executable(supervisor_node src/supervisor_node.cpp)
-set(SOURCES src/supervisor_node.cpp)
+add_executable(supervisor_node src/supervisor_node/supervisor_node.cpp
+        src/supervisor_node/header/supervisor_node_header.h
+        src/supervisor_node/methods/methods.cpp
+        src/supervisor_node/states/idle.h
+        src/supervisor_node/states/manual.h
+        src/supervisor_node/states/active.h
+        src/supervisor_node/states/emergency_takeover.h
+        src/supervisor_node/states/emergency_stop.h)
+set(SOURCES src/supervisor_node/supervisor_node.cpp)
 ament_target_dependencies(supervisor_node ${DEPENDENCIES}) # works only for packages found with 'find_package', links files included inside the script
 install(TARGETS supervisor_node DESTINATION lib/${PROJECT_NAME})
 

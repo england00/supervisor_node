@@ -3,7 +3,7 @@
   <img src="./docs/logo.JPG" width="100%" />
 </p>
 
-The [Supervisor Node](src/supervisor_node.cpp) is responsible for storing the overall health state of the vehicle through
+The [Supervisor Node](src/supervisor_node/supervisor_node.cpp) is responsible for storing the overall health state of the vehicle through
 a finite state machine, which here has been implemented using [YASMIN](https://github.com/uleroboticsgroup/yasmin) library. 
 The node's output is the state of the FSM and is published as a topic.
 
@@ -60,7 +60,7 @@ colcon build
     - [Source Files](src)
         - [External State Selector Node](src/external_state_selector_node.cpp)
         - [Pub/Sub Simulator Node](src/pub_sub_simulator_node.cpp)
-        - [Supervisor Node](src/supervisor_node.cpp)
+        - [Supervisor Node](src/supervisor_node/supervisor_node.cpp)
 
 
 ## Specs
@@ -106,7 +106,7 @@ To function, the supervisor node communicates with the other available nodes thr
 - *supervisor_node/primary_driving_stack*, in which it is **subscribed** to receive notifications of the execution of _Primary Driving Stack_ imposed by an outer service to the system;
 - *supervisor_node/current_state*, in which the _current state_ of the node FSM is **published** as output for any outer service.
 
-To run the [Supervisor Node](src/supervisor_node.cpp) open one terminal window and follow these commands:
+To run the [Supervisor Node](src/supervisor_node/supervisor_node.cpp) open one terminal window and follow these commands:
 ```shell
 cd ~/ros2_ws
 source /opt/ros/foxy/setup.bash
@@ -115,7 +115,7 @@ ros2 run supervisor_node supervisor_node
 ```
 
 ## Demo
-Within the repository, two additional nodes are included for working with the [Supervisor Node](src/supervisor_node.cpp) for a demonstration purpose:
+Within the repository, two additional nodes are included for working with the [Supervisor Node](src/supervisor_node/supervisor_node.cpp) for a demonstration purpose:
 - [External State Selector Node](src/external_state_selector_node.cpp), which simulates normal state transitions of the FSM invoked externally by keyboard inputs given by the user;
 - [Pub/Sub Simulator Node](src/pub_sub_simulator_node.cpp), that automatically publishes and subscribes in all the available topics, simulating all the possible states and transitions in which the FSM can go through.
 
