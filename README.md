@@ -58,8 +58,8 @@ colcon build
         - [Demo](launch/demo.py)
     - [Package XML](./package.xml)
     - [Source Files](src)
-        - [External State Selector Node](src/external_state_selector_node.cpp)
-        - [Pub/Sub Simulator Node](src/pub_sub_simulator_node.cpp)
+        - [External State Selector Node](src/external_state_selector_node/external_state_selector_node.cpp)
+        - [Pub/Sub Simulator Node](src/pub_sub_simulator_node/pub_sub_simulator_node.cpp)
         - [Supervisor Node](src/supervisor_node/supervisor_node.cpp)
 
 
@@ -116,8 +116,8 @@ ros2 run supervisor_node supervisor_node
 
 ## Demo
 Within the repository, two additional nodes are included for working with the [Supervisor Node](src/supervisor_node/supervisor_node.cpp) for a demonstration purpose:
-- [External State Selector Node](src/external_state_selector_node.cpp), which simulates normal state transitions of the FSM invoked externally by keyboard inputs given by the user;
-- [Pub/Sub Simulator Node](src/pub_sub_simulator_node.cpp), that automatically publishes and subscribes in all the available topics, simulating all the possible states and transitions in which the FSM can go through.
+- [External State Selector Node](src/external_state_selector_node/external_state_selector_node.cpp), which simulates normal state transitions of the FSM invoked externally by keyboard inputs given by the user;
+- [Pub/Sub Simulator Node](src/pub_sub_simulator_node/pub_sub_simulator_node.cpp), that automatically publishes and subscribes in all the available topics, simulating all the possible states and transitions in which the FSM can go through.
 
 To run the demo open three terminal window and follow these commands for each one:
 - Terminal 1:

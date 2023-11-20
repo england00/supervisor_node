@@ -1,7 +1,7 @@
 #ifndef SUPERVISOR_NODE_EMERGENCY_TAKEOVER_H
 #define SUPERVISOR_NODE_EMERGENCY_TAKEOVER_H
 
-#include "../header/supervisor_node_header.h"
+#include "../header/header.h"
 
 /********************************************* Emergency Takeover State ***********************************************/
 class EmergencyTakeoverState : public yasmin::State {
@@ -63,12 +63,29 @@ public:
     }
 
     /// other methods
-    void set_next_state(string str) {  this->next_state_ = str;  }
-    void set_secondary_driving_stack_command(string str) {  this->secondary_driving_stack_command_ = str;  }
-    void set_deadline_missed() {  this->deadline_missed_ = true;  }
-    void set_general_driver_response(string str) {  this->general_driver_response_ = str;  }
-    void set_lost_liveliness() {  this->lost_liveliness_ = true;  }
-    string to_string() {  return ET;  }
+    void set_next_state(string str) {
+        this->next_state_ = str;
+    }
+
+    void set_secondary_driving_stack_command(string str) {
+        this->secondary_driving_stack_command_ = str;
+    }
+
+    void set_deadline_missed() {
+        this->deadline_missed_ = true;
+    }
+
+    void set_general_driver_response(string str) {
+        this->general_driver_response_ = str;
+    }
+
+    void set_lost_liveliness() {
+        this->lost_liveliness_ = true;
+    }
+
+    string to_string() {
+        return ET;
+    }
 };
 
 #endif //SUPERVISOR_NODE_EMERGENCY_TAKEOVER_H

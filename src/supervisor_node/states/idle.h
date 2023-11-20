@@ -1,7 +1,7 @@
 #ifndef SUPERVISOR_NODE_IDLE_STATE_H
 #define SUPERVISOR_NODE_IDLE_STATE_H
 
-#include "../header/supervisor_node_header.h"
+#include "../header/header.h"
 
 /**************************************************** Idle State ******************************************************/
 class IdleState : public yasmin::State {
@@ -39,8 +39,13 @@ public:
     }
 
     /// other methods
-    void set_next_state(string str) {  this->next_state_ = str;  }
-    string to_string() {  return I;  }
+    void set_next_state(string str) {
+        this->next_state_ = str;
+    }
+
+    string to_string() {
+        return I;
+    }
 };
 
 #endif //SUPERVISOR_NODE_IDLE_STATE_H

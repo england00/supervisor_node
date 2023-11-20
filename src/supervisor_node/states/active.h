@@ -1,7 +1,7 @@
 #ifndef SUPERVISOR_NODE_ACTIVE_STATE_H
 #define SUPERVISOR_NODE_ACTIVE_STATE_H
 
-#include "../header/supervisor_node_header.h"
+#include "../header/header.h"
 
 /*************************************************** Active State *****************************************************/
 class ActiveState : public yasmin::State {
@@ -61,13 +61,33 @@ public:
     }
 
     /// other methods
-    void set_next_state(string str) {  this->next_state_ = str;  }
-    void set_primary_driving_stack_command(string str) {  this->primary_driving_stack_command_ = str;  }
-    void set_deadline_missed() {  this->deadline_missed_ = true;  }
-    void set_common_fault(string str) {  this->common_fault_ = str;  }
-    void set_general_driver_response(string str) {  this->general_driver_response_ = str;  }
-    void set_lost_liveliness() {  this->lost_liveliness_ = true;  }
-    string to_string() {  return A;  }
+    void set_next_state(string str) {
+        this->next_state_ = str;
+    }
+
+    void set_primary_driving_stack_command(string str) {
+        this->primary_driving_stack_command_ = str;
+    }
+
+    void set_deadline_missed() {
+        this->deadline_missed_ = true;
+    }
+
+    void set_common_fault(string str) {
+        this->common_fault_ = str;
+    }
+
+    void set_general_driver_response(string str) {
+        this->general_driver_response_ = str;
+    }
+
+    void set_lost_liveliness() {
+        this->lost_liveliness_ = true;
+    }
+
+    string to_string() {
+        return A;
+    }
 };
 
 #endif //SUPERVISOR_NODE_ACTIVE_STATE_H

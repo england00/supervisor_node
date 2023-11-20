@@ -1,4 +1,4 @@
-#include "header/supervisor_node_header.h"
+#include "header/header.h"
 #include "states/idle.h"
 #include "states/manual.h"
 #include "states/active.h"
@@ -99,7 +99,7 @@ public:
             subscription_options_general_driver_response
         );
 
-        // create a finite state machine
+        // finite state machine creation
         auto fsm = std::make_shared<yasmin::StateMachine>(yasmin::StateMachine({END}));
 
         // publishing and subscribing for states information

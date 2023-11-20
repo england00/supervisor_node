@@ -42,26 +42,41 @@ set(DEPENDENCIES
 
 # supervisor node
 add_executable(supervisor_node src/supervisor_node/supervisor_node.cpp
-        src/supervisor_node/header/supervisor_node_header.h
-        src/supervisor_node/methods/methods.cpp
-        src/supervisor_node/states/idle.h
-        src/supervisor_node/states/manual.h
-        src/supervisor_node/states/active.h
-        src/supervisor_node/states/emergency_takeover.h
-        src/supervisor_node/states/emergency_stop.h)
+  src/supervisor_node/header/header.h
+  src/supervisor_node/methods/methods.cpp
+  src/supervisor_node/states/idle.h
+  src/supervisor_node/states/manual.h
+  src/supervisor_node/states/active.h
+  src/supervisor_node/states/emergency_takeover.h
+  src/supervisor_node/states/emergency_stop.h)
 set(SOURCES src/supervisor_node/supervisor_node.cpp)
 ament_target_dependencies(supervisor_node ${DEPENDENCIES}) # works only for packages found with 'find_package', links files included inside the script
 install(TARGETS supervisor_node DESTINATION lib/${PROJECT_NAME})
 
 # state selector node
-add_executable(external_state_selector_node src/external_state_selector_node.cpp)
-set(SOURCES src/external_state_selector_node.cpp)
+add_executable(external_state_selector_node
+  src/external_state_selector_node/external_state_selector_node.cpp
+  src/external_state_selector_node/header/header.h
+  src/external_state_selector_node/methods/methods.cpp
+  src/external_state_selector_node/states/idle.h
+  src/external_state_selector_node/states/manual.h
+  src/external_state_selector_node/states/active.h
+  src/external_state_selector_node/states/emergency_takeover.h
+  src/external_state_selector_node/states/emergency_stop.h)
+set(SOURCES src/external_state_selector_node/external_state_selector_node.cpp)
 ament_target_dependencies(external_state_selector_node ${DEPENDENCIES}) # works only for packages found with 'find_package', links files included inside the script
 install(TARGETS external_state_selector_node DESTINATION lib/${PROJECT_NAME})
 
 # state selector node
-add_executable(pub_sub_simulator_node src/pub_sub_simulator_node.cpp)
-set(SOURCES src/pub_sub_simulator_node.cpp)
+add_executable(pub_sub_simulator_node src/pub_sub_simulator_node/pub_sub_simulator_node.cpp
+  src/pub_sub_simulator_node/header/header.h
+  src/pub_sub_simulator_node/methods/methods.cpp
+  src/pub_sub_simulator_node/states/idle.h
+  src/pub_sub_simulator_node/states/manual.h
+  src/pub_sub_simulator_node/states/active.h
+  src/pub_sub_simulator_node/states/emergency_takeover.h
+  src/pub_sub_simulator_node/states/emergency_stop.h)
+set(SOURCES src/pub_sub_simulator_node/pub_sub_simulator_node.cpp)
 ament_target_dependencies(pub_sub_simulator_node ${DEPENDENCIES}) # works only for packages found with 'find_package', links files included inside the script
 install(TARGETS pub_sub_simulator_node DESTINATION lib/${PROJECT_NAME})
 

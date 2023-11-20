@@ -1,7 +1,7 @@
 #ifndef SUPERVISOR_NODE_EMERGENCY_STOP_H
 #define SUPERVISOR_NODE_EMERGENCY_STOP_H
 
-#include "../header/supervisor_node_header.h"
+#include "../header/header.h"
 
 /*********************************************** Emergency Stop State *************************************************/
 class EmergencyStopState : public yasmin::State {
@@ -50,8 +50,13 @@ public:
     }
 
     /// other methods
-    void set_next_state(string str) {  this->next_state_ = str;  }
-    string to_string() {  return ES;  }
+    void set_next_state(string str) {
+        this->next_state_ = str;
+    }
+
+    string to_string() {
+        return ES;
+    }
 };
 
 #endif //SUPERVISOR_NODE_EMERGENCY_STOP_H
