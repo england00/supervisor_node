@@ -15,11 +15,13 @@
 #define ET "EMERGENCY TAKEOVER"
 #define ES "EMERGENCY STOP"
 #define END "END"
+
 #define GENERAL_SLEEP 100  // milliseconds
 #define END_SLEEP 500  // milliseconds
-#define EMERGENCY_TIMER 50000
+#define EMERGENCY_TIMER 55000
 #define DEADLINE_PRIMARY_STACK 200  // milliseconds
 #define DEADLINE_SECONDARY_STACK 300  // milliseconds
+
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"

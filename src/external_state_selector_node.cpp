@@ -16,9 +16,11 @@
 #define ET "EMERGENCY TAKEOVER"
 #define ES "EMERGENCY STOP"
 #define END "END"
+
 #define INPUT_ERROR_SLEEP 200 // milliseconds
 #define UPDATE_CURRENT_STATE_SLEEP 100  // milliseconds
 #define END_SLEEP 500  // milliseconds
+
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 
