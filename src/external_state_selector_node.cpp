@@ -17,10 +17,12 @@
 #define ES "EMERGENCY STOP"
 #define END "END"
 
+/// All these times are chosen for the correctness of the simulation
 #define INPUT_ERROR_SLEEP 200 // milliseconds
 #define UPDATE_CURRENT_STATE_SLEEP 100  // milliseconds
 #define END_SLEEP 500  // milliseconds
 
+#define PUB_SUB_QUEUE 1
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 
@@ -138,6 +140,15 @@ public:
             cout << "2. Pass to " + string(A) << endl;
             cin >> this->state_selection_;  // expecting keyboard input
             cin.ignore();  // cleaning input buffer
+
+            // checking if current state is changed during the state selection
+            if (this->current_state_ != ManualState::to_string()) {
+                cout << "Updating to effective CURRENT STATE" << endl;
+                this_thread::sleep_for(chrono::milliseconds(UPDATE_CURRENT_STATE_SLEEP));
+                if (this->current_state_ == ES) {
+                    return "M>ES";
+                }
+            }
 
             // checking keyboard input correctness
             if (input_integer_checker(this->state_selection_, 1, 2)) {
@@ -331,13 +342,13 @@ private:
     /// CURRENT STATE SUBSCRIPTION
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_state_subscription_ = this->create_subscription<std_msgs::msg::String>(
             CURRENT_STATE_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local(),
+            rclcpp::QoS(rclcpp::KeepLast(PUB_SUB_QUEUE)).reliable().transient_local(),
             std::bind(&ExternalStateSelectorNode::current_state_subscription, this, placeholders::_1)
     );
     /// STATE SELECTION PUBLISHER
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_state_selection_ = this->create_publisher<std_msgs::msg::String>(
             STATE_SELECTION_TOPIC,
-            rclcpp::QoS(rclcpp::KeepLast(1)).reliable()
+            rclcpp::QoS(rclcpp::KeepLast(PUB_SUB_QUEUE)).reliable()
     );
 
     // states

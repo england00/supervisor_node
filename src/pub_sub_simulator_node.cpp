@@ -17,15 +17,19 @@
 #define ES "EMERGENCY STOP"
 #define END "END"
 
-#define GENERAL_SLEEP 100  // milliseconds
+/// All these times are chosen for the correctness of the simulation
+#define GENERAL_SLEEP 3+0  // milliseconds
 #define MANUAL_COMMAND_PUBLISHER_SLEEP 1000  // milliseconds
 #define ACTIVE_SLEEP 10 // milliseconds
 #define PRIMARY_DRIVING_STACK_PUBLISHER_SLEEP 100  // milliseconds
 #define SECONDARY_DRIVING_STACK_PUBLISHER_SLEEP 100  // milliseconds
+#define GENERAL_DRIVER_RESPONSE_SLEEP 1000 // milliseconds
 #define END_SLEEP 500  // milliseconds
 #define DEADLINE_PRIMARY_STACK 200  // milliseconds
 #define DEADLINE_SECONDARY_STACK 300  // milliseconds
+#define GENERAL_DRIVER_LIVELINESS 2000 // milliseconds
 
+#define PUB_SUB_QUEUE 1
 #define CURRENT_STATE_TOPIC "supervisor_node/current_state"
 #define STATE_SELECTION_TOPIC "supervisor_node/state_selection"
 #define MANUAL_COMMAND_TOPIC "supervisor_node/manual_command"
@@ -64,6 +68,14 @@ string choose_common_fault() {
     return command;
 }
 
+string choose_general_driver_response() {
+    int choise = generateRandomInt(1, 10);
+    string command;
+    if (choise == 5) {  command = "";  }
+    else {  command = "GENERAL DRIVER RESPONSE";  }
+    return command;
+}
+
 string timestamp(string command) {
     // date and time
     char time_buffer[50];  // buffer for date and current time
@@ -90,30 +102,43 @@ void polling_publisher(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub,
     while (!stop_thread) {
         // different published messages based on current state
         if (state == M) {  // MANUAL STATE
-            message.data = choose_manual_commands();
-            commands = "MANUAL COMMANDS";
+            if (thread_number == 0) {
+                message.data = choose_manual_commands();
+                commands = "MANUAL COMMANDS";
+            } else if (thread_number == 2) {
+                message.data = choose_general_driver_response();
+                commands = "GENERAL DRIVER RESPONSE";
+            }
         } else if (state == A) {  // ACTIVE STATE
             if (thread_number == 0) {
                 message.data = "PRIMARY DRIVING STACK";
                 commands = "PRIMARY DRIVING STACK";
-            } else {
+            } else if (thread_number == 1) {
                 message.data = choose_common_fault();
                 commands = "COMMON FAULT";
+            } else if (thread_number == 2) {
+                message.data = choose_general_driver_response();
+                commands = "GENERAL DRIVER RESPONSE";
             }
         } else if (state == ET) {  // EMERGENCY TAKEOVER STATE
-            message.data = "SECONDARY DRIVING STACK";
-            commands = "SECONDARY DRIVING STACK";
+            if (thread_number == 0) {
+                message.data = "SECONDARY DRIVING STACK";
+                commands = "SECONDARY DRIVING STACK";
+            } else if (thread_number == 2) {
+                message.data = choose_general_driver_response();
+                commands = "GENERAL DRIVER RESPONSE";
+            }
         }
         if (thread_number == 0) {
             system("clear");
             cout << "PUB/SUB SIMULATOR NODE:\n\n"
                     "SUPERVISOR NODE --> ON\n"
                     "Current state: " <<
-                    state << "\n\nPublishing " << commands << ":" << endl;
+                    state << "\n\nPublishing " << commands << " and GENERAL DRIVER RESPONSE:" << endl;
         }
         if (message.data != "") {
             pub->publish(message);  // publishing
-            if (thread_number == 0)
+            if (thread_number != 1)
                 cout << timestamp(message.data) << endl;
         }
         this_thread::sleep_for(chrono::milliseconds(delay));  // timer
@@ -179,20 +204,26 @@ class ManualState : public yasmin::State {
 private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr manual_commands_publisher_{};
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr general_driver_response_publisher_{};
     string selected_state_, current_state_;
-    thread manual_commands_thread_;
+    thread manual_commands_thread_, general_driver_response_thread_;
 
 public:
     /// constructor
-    ManualState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"M>I", "M>A", "M>ES"}),
-                                                                            manual_commands_publisher_(pub) {};
+    ManualState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub1,
+                rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub2) : yasmin::State({"M>I", "M>A", "M>ES"}),
+                                                                            manual_commands_publisher_(pub1),
+                                                                            general_driver_response_publisher_(pub2) {};
     /// execution
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", ManualState::to_string());  // memorizing last state
 
-        // starting publisher thread
+        // starting publishers threads
         this->manual_commands_thread_ = thread([this]() {  // opening new simulation thread
             polling_publisher(this->manual_commands_publisher_, ManualState::to_string(), MANUAL_COMMAND_PUBLISHER_SLEEP);
+        });
+        this->general_driver_response_thread_ = thread([this]() {  // opening new simulation thread
+            polling_publisher(this->general_driver_response_publisher_, ManualState::to_string(), GENERAL_DRIVER_RESPONSE_SLEEP, 2);
         });
 
         // state cycle
@@ -201,7 +232,10 @@ public:
             this_thread::sleep_for(chrono::milliseconds(GENERAL_SLEEP));
 
             // managing transitions
-            if (this->selected_state_ == I) {  // checking if SUPERVISOR NODE has switched to IDLE state
+            if (this->current_state_ == ES) {  // checking if SUPERVISOR NODE has switched to EMERGENCY STOP state
+                this->exit_publisher_thread();
+                return "M>ES";
+            } else if (this->selected_state_ == I) {  // checking if SUPERVISOR NODE has switched to IDLE state
                 this->exit_publisher_thread();
                 return "M>I";
             } else if (this->selected_state_ == A) {  // checking if SUPERVISOR NODE has switched to ACTIVE state
@@ -219,6 +253,7 @@ public:
     void exit_publisher_thread() {
         stop_thread = true;
         this->manual_commands_thread_.join();
+        this->general_driver_response_thread_.join();
     }
     void set_selected_state(string str) {  this->selected_state_ = str;  }
     void set_current_state(string str) {  this->current_state_ = str;  }
@@ -232,25 +267,31 @@ private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr primary_driving_stack_publisher_{};
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr common_fault_publisher_{};
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr general_driver_response_publisher_{};
     string selected_state_, current_state_;
-    thread primary_driving_stack_thread_, common_fault_thread_;
+    thread primary_driving_stack_thread_, common_fault_thread_, general_driver_response_thread_;
 
 public:
     /// constructor
     ActiveState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub1,
-                rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub2) : yasmin::State({"A>M", "A>ET", "A>ES"}),
+                rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub2,
+                rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub3) : yasmin::State({"A>M", "A>ET", "A>ES"}),
                                                                             primary_driving_stack_publisher_(pub1),
-                                                                            common_fault_publisher_(pub2) {};
+                                                                            common_fault_publisher_(pub2),
+                                                                            general_driver_response_publisher_(pub3) {};
     /// execution
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", ActiveState::to_string());  // memorizing last state
 
-        // starting publishers thread
+        // starting publishers threads
         this->primary_driving_stack_thread_ = thread([this]() {  // opening new simulation thread
             polling_publisher(this->primary_driving_stack_publisher_, ActiveState::to_string(), PRIMARY_DRIVING_STACK_PUBLISHER_SLEEP);
         });
         this->common_fault_thread_ = thread([this]() {  // opening new simulation thread
             polling_publisher(this->common_fault_publisher_, ActiveState::to_string(), PRIMARY_DRIVING_STACK_PUBLISHER_SLEEP, 1);
+        });
+        this->general_driver_response_thread_ = thread([this]() {  // opening new simulation thread
+            polling_publisher(this->general_driver_response_publisher_, ActiveState::to_string(), GENERAL_DRIVER_RESPONSE_SLEEP, 2);
         });
 
         // state cycle
@@ -262,6 +303,9 @@ public:
             if (this->current_state_ == ET) {  // checking if SUPERVISOR NODE has switched to EMERGENCY TAKEOVER state
                 this->exit_publisher_thread();
                 return "A>ET";
+            } else if (this->current_state_ == ES) {  // checking if SUPERVISOR NODE has switched to EMERGENCY STOP state
+                this->exit_publisher_thread();
+                return "A>ES";
             } else if (this->selected_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
                 this->exit_publisher_thread();
                 return "A>M";
@@ -278,6 +322,7 @@ public:
         stop_thread = true;
         this->primary_driving_stack_thread_.join();
         this->common_fault_thread_.join();
+        this->general_driver_response_thread_.join();
     }
     void set_selected_state(string str) {  this->selected_state_ = str;  }
     void set_current_state(string str) {  this->current_state_ = str;  }
@@ -290,20 +335,26 @@ class EmergencyTakeoverState : public yasmin::State {
 private:
     // parameters
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr secondary_driving_stack_publisher_{};
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr general_driver_response_publisher_{};
     string selected_state_, current_state_;
-    thread secondary_driving_stack_thread_;
+    thread secondary_driving_stack_thread_, general_driver_response_thread_;
 
 public:
     /// constructor
-    EmergencyTakeoverState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub) : yasmin::State({"ET>M", "ET>A", "ET>ES"}),
-                                                                                       secondary_driving_stack_publisher_(pub) {};
+    EmergencyTakeoverState(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub1,
+                           rclcpp::Publisher<std_msgs::msg::String>::SharedPtr &pub2) : yasmin::State({"ET>M", "ET>A", "ET>ES"}),
+                                                                                       secondary_driving_stack_publisher_(pub1),
+                                                                                       general_driver_response_publisher_(pub2) {};
     /// execution
     string execute(shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
         blackboard->set<string>("previous_state", EmergencyTakeoverState::to_string());  // memorizing last state
 
-        // starting publisher thread
+        // starting publishers threads
         this->secondary_driving_stack_thread_ = thread([this]() {  // opening new simulation thread
             polling_publisher(this->secondary_driving_stack_publisher_, EmergencyTakeoverState::to_string(), SECONDARY_DRIVING_STACK_PUBLISHER_SLEEP);
+        });
+        this->general_driver_response_thread_ = thread([this]() {  // opening new simulation thread
+            polling_publisher(this->general_driver_response_publisher_, EmergencyTakeoverState::to_string(), GENERAL_DRIVER_RESPONSE_SLEEP, 2);
         });
 
         // state cycle
@@ -316,7 +367,6 @@ public:
                 this->exit_publisher_thread();
                 return "ET>A";
             } else if (this->current_state_ == ES) {  // checking if SUPERVISOR NODE has switched to EMERGENCY STOP state
-                cout << "ciao" << endl;
                 this->exit_publisher_thread();
                 return "ET>ES";
             } else if (this->selected_state_ == M) {  // checking if SUPERVISOR NODE has switched to MANUAL state
@@ -334,6 +384,7 @@ public:
     void exit_publisher_thread() {
         stop_thread = true;
         this->secondary_driving_stack_thread_.join();
+        this->general_driver_response_thread_.join();
     }
     void set_selected_state(string str) {  this->selected_state_ = str;  }
     void set_current_state(string str) {  this->current_state_ = str;  }
@@ -398,6 +449,7 @@ private:
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_common_fault_ = nullptr;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_primary_driving_stack_command_ = nullptr;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_secondary_driving_stack_command_ = nullptr;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publish_general_driver_response_ = nullptr;
 
     // states
     std::shared_ptr<IdleState> idleState_ = nullptr;
@@ -410,10 +462,11 @@ public:
     /// constructor
     PubSubSimulatorNode() : simple_node::Node("pub_sub_simulator_node") {
 
-        // publishers and subscribers
-        /// SELECTED STATE SUBSCRIPTION
-        rclcpp::QoS qos_profile(rclcpp::KeepLast(1));  // queue dimension
+        // quality of service
+        rclcpp::QoS qos_profile(rclcpp::KeepLast(PUB_SUB_QUEUE));  // queue dimension
         qos_profile.reliable();  // type of communication
+
+        /// SELECTED STATE SUBSCRIPTION
         this->selected_state_sub_ = this->create_subscription<std_msgs::msg::String>(STATE_SELECTION_TOPIC,
             qos_profile,
             std::bind(&PubSubSimulatorNode::selected_state_subscription, this, placeholders::_1)
@@ -444,12 +497,18 @@ public:
                 SECONDARY_DRIVING_STACK_TOPIC,
                 qos_profile
         );
+        /// GENERAL DRIVER RESPONSE PUBLISHER
+        qos_profile.liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC).liveliness_lease_duration(chrono::milliseconds(GENERAL_DRIVER_LIVELINESS));
+        this->publish_general_driver_response_ = this->create_publisher<std_msgs::msg::String>(
+                GENERAL_DRIVER_TOPIC,
+                qos_profile
+        );
 
         // create a finite state machine
         this->idleState_ = std::make_shared<IdleState>();
-        this->manualState_ = std::make_shared<ManualState>(this->publish_manual_command_);
-        this->activeState_ = std::make_shared<ActiveState>(this->publish_primary_driving_stack_command_, this->publish_common_fault_);
-        this->emergencyTakeoverState_ = std::make_shared<EmergencyTakeoverState>(this->publish_secondary_driving_stack_command_);
+        this->manualState_ = std::make_shared<ManualState>(this->publish_manual_command_, this->publish_general_driver_response_);
+        this->activeState_ = std::make_shared<ActiveState>(this->publish_primary_driving_stack_command_, this->publish_common_fault_, this->publish_general_driver_response_);
+        this->emergencyTakeoverState_ = std::make_shared<EmergencyTakeoverState>(this->publish_secondary_driving_stack_command_, this->publish_general_driver_response_);
         this->emergencyStopState_ = std::make_shared<EmergencyStopState>();
         auto fsm = std::make_shared<yasmin::StateMachine>(yasmin::StateMachine({END}));
 
