@@ -34,7 +34,6 @@
 #define PRIMARY_DRIVING_STACK_TOPIC "supervisor_node/primary_driving_stack"
 #define SECONDARY_DRIVING_STACK_TOPIC "supervisor_node/secondary_driving_stack"
 #define COMMON_FAULT_TOPIC "supervisor_node/common_fault"
-#define SERIOUS_FAULT_TOPIC "supervisor_node/serious_fault"
 #define GENERAL_DRIVER_TOPIC "supervisor_node/general_sensor_or_actuator_driver_response"
 
 using namespace std;
