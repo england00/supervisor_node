@@ -18,7 +18,7 @@
 #define END "END"
 
 /// All these times are chosen for the correctness of the simulation
-#define GENERAL_SLEEP 3+0  // milliseconds
+#define GENERAL_SLEEP 30  // milliseconds
 #define MANUAL_COMMAND_PUBLISHER_SLEEP 1000  // milliseconds
 #define ACTIVE_SLEEP 10 // milliseconds
 #define PRIMARY_DRIVING_STACK_PUBLISHER_SLEEP 100  // milliseconds
