@@ -3,7 +3,7 @@
   <img src="./docs/logo.JPG" width="100%" />
 </p>
 
-The [Supervisor Node](src/supervisor_node/supervisor_node.cpp) is responsible for storing the overall health state of the vehicle through
+The [Supervisor Node](src/supervisor_node) is responsible for storing the overall health state of the vehicle through
 a finite state machine, which here has been implemented using [YASMIN](https://github.com/uleroboticsgroup/yasmin) library. 
 The node's output is the state of the FSM and is published as a topic.
 
@@ -58,9 +58,42 @@ colcon build
         - [Demo](launch/demo.py)
     - [Package XML](./package.xml)
     - [Source Files](src)
-        - [External State Selector Node](src/external_state_selector_node/external_state_selector_node.cpp)
-        - [Pub/Sub Simulator Node](src/pub_sub_simulator_node/pub_sub_simulator_node.cpp)
-        - [Supervisor Node](src/supervisor_node/supervisor_node.cpp)
+        - [External State Selector Node](src/external_state_selector_node)
+            - [Header](src/external_state_selector_node/header)
+                - [Header (.h)](src/external_state_selector_node/header/header.h)
+            - [Methods](src/external_state_selector_node/methods)
+                - [Methods (.cpp)](src/external_state_selector_node/methods/methods.cpp) 
+            - [States](src/external_state_selector_node/states)
+                - [Idle (.h)](src/external_state_selector_node/states/idle.h)
+                - [Manual (.h)](src/external_state_selector_node/states/manual.h)
+                - [Active (.h)](src/external_state_selector_node/states/active.h)
+                - [Emergency Takeover (.h)](src/external_state_selector_node/states/emergency_takeover.h)
+                - [Emergency Stop (.h)](src/external_state_selector_node/states/emergency_stop.h)
+            - [External State Selector Node (.cpp)](src/external_state_selector_node/external_state_selector_node.cpp)
+        - [Pub/Sub Simulator Node](src/pub_sub_simulator_node)
+            - [Header](src/pub_sub_simulator_node/header)
+                - [Header (.h)](src/pub_sub_simulator_node/header/header.h)
+            - [Methods](src/pub_sub_simulator_node/methods)
+                - [Methods (.cpp)](src/pub_sub_simulator_node/methods/methods.cpp)
+            - [States](src/pub_sub_simulator_node/states)
+                - [Idle (.h)](src/pub_sub_simulator_node/states/idle.h)
+                - [Manual (.h)](src/pub_sub_simulator_node/states/manual.h)
+                - [Active (.h)](src/pub_sub_simulator_node/states/active.h)
+                - [Emergency Takeover (.h)](src/pub_sub_simulator_node/states/emergency_takeover.h)
+                - [Emergency Stop (.h)](src/pub_sub_simulator_node/states/emergency_stop.h)
+            - [Pub/Sub Simulator Node (.cpp)](src/pub_sub_simulator_node/pub_sub_simulator_node.cpp)
+        - [Supervisor Node](src/supervisor_node)
+            - [Header](src/supervisor_node/header)
+                - [Header (.h)](src/supervisor_node/header/header.h)
+            - [Methods](src/supervisor_node/methods)
+                - [Methods (.cpp)](src/supervisor_node/methods/methods.cpp)
+            - [States](src/supervisor_node/states)
+                - [Idle (.h)](src/supervisor_node/states/idle.h)
+                - [Manual (.h)](src/supervisor_node/states/manual.h)
+                - [Active (.h)](src/supervisor_node/states/active.h)
+                - [Emergency Takeover (.h)](src/supervisor_node/states/emergency_takeover.h)
+                - [Emergency Stop (.h)](src/supervisor_node/states/emergency_stop.h)
+            - [Supervisor Node (.cpp)](src/supervisor_node/supervisor_node.cpp)
 
 
 ## Specs
@@ -109,7 +142,7 @@ In order to work, the supervisor node communicates with the other available node
 - *supervisor_node/general_sensor_or_actuator_driver_response*, in which it is **subscribed** to receive messages from any hardware or software components connected to the system, which communicate their liveliness (**note**: here a LOST LIVELINESS pulls the transition to the **Emergency Stop** state);
 - *supervisor_node/current_state*, in which the _current state_ of the node FSM is **published** as output for any outer service.
 
-To run the [Supervisor Node](src/supervisor_node/supervisor_node.cpp) open one terminal window and follow these commands:
+To run the [Supervisor Node](src/supervisor_node) open one terminal window and follow these commands:
 ```shell
 cd ~/ros2_ws
 source /opt/ros/foxy/setup.bash
@@ -118,9 +151,9 @@ ros2 run supervisor_node supervisor_node
 ```
 
 ## Demo
-Within the repository, two additional nodes are included for working with the [Supervisor Node](src/supervisor_node/supervisor_node.cpp) for a demonstration purpose:
-- [External State Selector Node](src/external_state_selector_node/external_state_selector_node.cpp), which simulates normal state transitions of the FSM invoked externally by keyboard inputs given by the user;
-- [Pub/Sub Simulator Node](src/pub_sub_simulator_node/pub_sub_simulator_node.cpp), that automatically publishes and subscribes in all the available topics, simulating all the possible states and transitions in which the FSM can go through.
+Within the repository, two additional nodes are included for working with the [Supervisor Node](src/supervisor_node) for a demonstration purpose:
+- [External State Selector Node](src/external_state_selector_node), which simulates normal state transitions of the FSM invoked externally by keyboard inputs given by the user;
+- [Pub/Sub Simulator Node](src/pub_sub_simulator_node), that automatically publishes and subscribes in all the available topics, simulating all the possible states and transitions in which the FSM can go through.
 
 To run the demo open three terminal window and follow these commands for each one:
 - Terminal 1:
